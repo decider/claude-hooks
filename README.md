@@ -91,20 +91,27 @@ export STRICT_MODE=false            # Strict quality checks
 
 ## 📊 Logging
 
-All hooks support comprehensive logging for debugging and monitoring.
+All hooks automatically log their execution for debugging and monitoring. **Logging is enabled by default** - no configuration needed!
 
-### Configuration
+### Default Settings
 
-Add to your `settings.json`:
+- **Location**: `~/.claude/logs/hooks.log`
+- **Level**: `INFO` (shows general execution flow)
+- **Max Size**: 10MB (auto-rotates when exceeded)
+- **Retention**: 7 days (old logs are automatically cleaned up)
+
+### Customizing or Disabling Logging
+
+To customize logging or turn it off, add to your `settings.json`:
 
 ```json
 {
   "logging": {
-    "enabled": true,
-    "level": "INFO",
-    "path": "~/.claude/logs/hooks.log",
-    "maxSize": 10485760,
-    "retention": 7
+    "enabled": false,      // Set to false to disable logging
+    "level": "DEBUG",      // Or "WARN", "ERROR" 
+    "path": "~/custom/path/hooks.log",
+    "maxSize": 5242880,    // 5MB in bytes
+    "retention": 30        // Keep logs for 30 days
   }
 }
 ```

@@ -22,6 +22,7 @@ HOOKS_DIR="$CLAUDE_DIR/hooks"
 echo "📁 Creating directories..."
 mkdir -p "$CLAUDE_DIR"
 mkdir -p "$HOOKS_DIR"
+mkdir -p "$CLAUDE_DIR/logs"  # Create logs directory for hook logging
 
 # Copy all hooks
 echo "📋 Copying hooks..."

@@ -14,15 +14,24 @@ echo "🔧 Installing Claude Hooks..."
 
 # Create directories
 mkdir -p "$HOOKS_DIR"
+mkdir -p "$HOOKS_DIR/common"  # For common libraries
 mkdir -p "$CLAUDE_DIR"
+mkdir -p "$CLAUDE_DIR/logs"   # For hook logs
+mkdir -p "$CLAUDE_DIR/tools"  # For log management tools
 
 # Copy hooks
 echo "📁 Copying hook scripts..."
 cp -r "$REPO_DIR/hooks/"* "$HOOKS_DIR/"
 
-# Make hooks executable
-echo "🔐 Making hooks executable..."
+# Copy tools
+echo "🛠️ Copying log management tools..."
+cp -r "$REPO_DIR/tools/"* "$CLAUDE_DIR/tools/" 2>/dev/null || true
+
+# Make hooks and tools executable
+echo "🔐 Making scripts executable..."
 chmod +x "$HOOKS_DIR"/*.sh
+chmod +x "$HOOKS_DIR/common"/*.sh 2>/dev/null || true
+chmod +x "$CLAUDE_DIR/tools"/*.sh 2>/dev/null || true
 
 # Copy configuration if it doesn't exist
 if [ ! -f "$CLAUDE_DIR/settings.json" ]; then

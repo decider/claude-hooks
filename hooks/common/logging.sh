@@ -3,11 +3,12 @@
 # Claude Hooks Common Logging Library
 # Provides centralized logging functionality for all hooks
 
-# Default configuration
+# Default configuration - logging is ON by default with smart defaults
+# Users can disable by setting CLAUDE_LOG_ENABLED=false or in settings.json
 CLAUDE_LOGS_DIR="${CLAUDE_LOGS_DIR:-$HOME/.claude/logs}"
 CLAUDE_LOG_FILE="${CLAUDE_LOG_FILE:-$CLAUDE_LOGS_DIR/hooks.log}"
 CLAUDE_LOG_LEVEL="${CLAUDE_LOG_LEVEL:-INFO}"
-CLAUDE_LOG_ENABLED="${CLAUDE_LOG_ENABLED:-true}"
+CLAUDE_LOG_ENABLED="${CLAUDE_LOG_ENABLED:-true}"  # ON by default
 CLAUDE_LOG_MAX_SIZE="${CLAUDE_LOG_MAX_SIZE:-10485760}"  # 10MB default
 CLAUDE_LOG_RETENTION_DAYS="${CLAUDE_LOG_RETENTION_DAYS:-7}"
 
@@ -137,27 +138,35 @@ log_performance() {
 }
 
 # Load configuration from settings.json if available
+# This ONLY runs if settings.json exists - otherwise we use defaults
 load_logging_config() {
     local settings_file="${CLAUDE_SETTINGS_FILE:-$HOME/.claude/settings.json}"
     
+    # Only load config if file exists - no error if missing
     if [ -f "$settings_file" ]; then
-        # Extract logging configuration
-        local enabled=$(jq -r '.logging.enabled // true' "$settings_file" 2>/dev/null)
-        local level=$(jq -r '.logging.level // "INFO"' "$settings_file" 2>/dev/null)
-        local path=$(jq -r '.logging.path // ""' "$settings_file" 2>/dev/null)
-        local max_size=$(jq -r '.logging.maxSize // 10485760' "$settings_file" 2>/dev/null)
-        local retention=$(jq -r '.logging.retention // 7' "$settings_file" 2>/dev/null)
+        # Check if logging section exists
+        local has_logging=$(jq -r 'has("logging")' "$settings_file" 2>/dev/null)
         
-        # Apply configuration
-        [ "$enabled" != "null" ] && CLAUDE_LOG_ENABLED="$enabled"
-        [ "$level" != "null" ] && CLAUDE_LOG_LEVEL="$level"
-        [ "$path" != "null" ] && [ -n "$path" ] && CLAUDE_LOG_FILE="$path"
-        [ "$max_size" != "null" ] && CLAUDE_LOG_MAX_SIZE="$max_size"
-        [ "$retention" != "null" ] && CLAUDE_LOG_RETENTION_DAYS="$retention"
-        
-        # Update current log level
-        CURRENT_LOG_LEVEL="${LOG_LEVELS[$CLAUDE_LOG_LEVEL]:-1}"
+        if [ "$has_logging" = "true" ]; then
+            # Extract logging configuration
+            local enabled=$(jq -r '.logging.enabled // empty' "$settings_file" 2>/dev/null)
+            local level=$(jq -r '.logging.level // empty' "$settings_file" 2>/dev/null)
+            local path=$(jq -r '.logging.path // empty' "$settings_file" 2>/dev/null)
+            local max_size=$(jq -r '.logging.maxSize // empty' "$settings_file" 2>/dev/null)
+            local retention=$(jq -r '.logging.retention // empty' "$settings_file" 2>/dev/null)
+            
+            # Apply configuration only if explicitly set
+            [ -n "$enabled" ] && [ "$enabled" != "null" ] && CLAUDE_LOG_ENABLED="$enabled"
+            [ -n "$level" ] && [ "$level" != "null" ] && CLAUDE_LOG_LEVEL="$level"
+            [ -n "$path" ] && [ "$path" != "null" ] && CLAUDE_LOG_FILE="$path"
+            [ -n "$max_size" ] && [ "$max_size" != "null" ] && CLAUDE_LOG_MAX_SIZE="$max_size"
+            [ -n "$retention" ] && [ "$retention" != "null" ] && CLAUDE_LOG_RETENTION_DAYS="$retention"
+            
+            # Update current log level
+            CURRENT_LOG_LEVEL="${LOG_LEVELS[$CLAUDE_LOG_LEVEL]:-1}"
+        fi
     fi
+    # If no settings.json or no logging section, we just use the defaults
 }
 
 # Initialize logging configuration

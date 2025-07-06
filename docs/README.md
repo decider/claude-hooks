@@ -2,6 +2,15 @@
 
 A comprehensive set of hooks designed to improve code quality and developer experience when using Claude Code.
 
+## 🎯 Zero Configuration Philosophy
+
+Claude Hooks work immediately after installation with sensible defaults:
+- ✅ **Automatic logging** - All executions logged to `~/.claude/logs/hooks.log`
+- ✅ **Smart defaults** - Package validation, code quality checks pre-configured
+- ✅ **No setup needed** - Just install and start coding
+
+**You only need to create configuration files if you want to customize behavior.**
+
 ## Quick Start
 
 ### Option 1: User-Level Installation (Recommended)

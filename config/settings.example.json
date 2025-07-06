@@ -1,11 +1,5 @@
 {
-  "logging": {
-    "enabled": true,
-    "level": "INFO",
-    "path": "~/.claude/logs/hooks.log",
-    "maxSize": 10485760,
-    "retention": 7
-  },
+  "_comment_logging": "Logging is ON by default. Add a 'logging' section only if you want to customize or disable it",
   "toolHooks": {
     "matchers": [
       {
