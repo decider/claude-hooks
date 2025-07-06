@@ -24,13 +24,18 @@ program
 
 program
   .command('init')
-  .description('Initialize Claude hooks in your project')
-  .option('-l, --level <level>', 'Configuration level: project, project-alt, local, or global', 'project')
+  .description('Initialize Claude hooks - choose quick setup or custom configuration')
+  .option('-l, --level <level>', 'Configuration level: project, project-alt, local, or global')
   .action(init);
 
 program
   .command('list')
   .description('List available hooks')
   .action(list);
+
+program
+  .command('manage')
+  .description('Interactively manage hooks in settings.json files')
+  .action(() => init({ customMode: true }));
 
 program.parse();
