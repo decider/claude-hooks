@@ -130,6 +130,31 @@ log_decision() {
     log_info "$hook_name" "Decision: $decision - $reason"
 }
 
+# Function to log detailed error context
+log_error_context() {
+    local hook_name=$1
+    local error_type=$2
+    local command=$3
+    local output=$4
+    local working_dir=$(pwd)
+    
+    log_error "$hook_name" "Error Type: $error_type"
+    log_error "$hook_name" "Working Directory: $working_dir"
+    [ -n "$command" ] && log_error "$hook_name" "Failed Command: $command"
+    [ -n "$output" ] && log_error "$hook_name" "Command Output: $output"
+}
+
+# Function to log environment context for debugging
+log_env_context() {
+    local hook_name=$1
+    
+    log_debug "$hook_name" "Node version: $(node --version 2>/dev/null || echo 'not found')"
+    log_debug "$hook_name" "NPM version: $(npm --version 2>/dev/null || echo 'not found')"
+    log_debug "$hook_name" "Working directory: $(pwd)"
+    log_debug "$hook_name" "Current user: $(whoami)"
+    log_debug "$hook_name" "PATH: $PATH"
+}
+
 # Function to log performance metrics
 log_performance() {
     local hook_name=$1
