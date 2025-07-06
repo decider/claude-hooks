@@ -17,7 +17,7 @@ A comprehensive set of hooks for [Claude Code](https://claude.ai/code) to enforc
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/claude-hooks.git
+git clone https://github.com/decider/claude-hooks.git
 cd claude-hooks
 
 # Run the setup script
@@ -123,9 +123,9 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🌟 Support
 
-- Report issues: [GitHub Issues](https://github.com/your-org/claude-hooks/issues)
-- Documentation: [Wiki](https://github.com/your-org/claude-hooks/wiki)
-- Discussions: [GitHub Discussions](https://github.com/your-org/claude-hooks/discussions)
+- Report issues: [GitHub Issues](https://github.com/decider/claude-hooks/issues)
+- Documentation: [Wiki](https://github.com/decider/claude-hooks/wiki)
+- Discussions: [GitHub Discussions](https://github.com/decider/claude-hooks/discussions)
 
 ## 🏷️ Version
 
