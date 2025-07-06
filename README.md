@@ -28,9 +28,9 @@ cd claude-hooks
 
 ```bash
 # Copy hooks to your Claude directory
-cp -r hooks ~/.claude/hooks
-cp config/settings.example.json ~/.claude/settings.json
-chmod +x ~/.claude/hooks/*.sh
+cp -r hooks ./claude/hooks
+cp config/settings.example.json ./claude/settings.json
+chmod +x ./claude/hooks/*.sh
 ```
 
 ### Project Integration
@@ -49,7 +49,7 @@ For team projects, see [Integration Guide](docs/INTEGRATION.md) for:
 
 ## ⚙️ Configuration
 
-Edit `~/.claude/settings.json` to customize:
+Edit `./claude/settings.json` to customize:
 
 ```json
 {
@@ -60,7 +60,7 @@ Edit `~/.claude/settings.json` to customize:
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/code-quality-primer.sh"
+            "command": "./claude/hooks/code-quality-primer.sh"
           }
         ]
       }
@@ -95,7 +95,7 @@ All hooks automatically log their execution for debugging and monitoring. **Logg
 
 ### Default Settings
 
-- **Location**: `~/.claude/logs/hooks.log`
+- **Location**: `./claude/logs/hooks.log`
 - **Level**: `INFO` (shows general execution flow)
 - **Max Size**: 10MB (auto-rotates when exceeded)
 - **Retention**: 7 days (old logs are automatically cleaned up)
@@ -109,7 +109,7 @@ To customize logging or turn it off, add to your `settings.json`:
   "logging": {
     "enabled": false,      // Set to false to disable logging
     "level": "DEBUG",      // Or "WARN", "ERROR" 
-    "path": "~/custom/path/hooks.log",
+    "path": "./custom/path/hooks.log",
     "maxSize": 5242880,    // 5MB in bytes
     "retention": 30        // Keep logs for 30 days
   }
@@ -127,10 +127,10 @@ To customize logging or turn it off, add to your `settings.json`:
 
 ```bash
 # View logs interactively
-~/.claude/tools/view-logs.sh
+./claude/tools/view-logs.sh
 
 # Clean old logs
-~/.claude/tools/clean-logs.sh
+./claude/tools/clean-logs.sh
 ```
 
 ### Log Format

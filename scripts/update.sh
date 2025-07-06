@@ -7,7 +7,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="$HOME/claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 
 echo "🔄 Updating Claude Hooks..."

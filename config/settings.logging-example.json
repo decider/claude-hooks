@@ -10,7 +10,7 @@
     "_comment_level": "Options: DEBUG, INFO (default), WARN, ERROR",
     
     "path": "~/my-custom-logs/claude-hooks.log",
-    "_comment_path": "Default is ~/.claude/logs/hooks.log",
+    "_comment_path": "Default is ./claude/logs/hooks.log",
     
     "maxSize": 5242880,
     "_comment_maxSize": "Size in bytes before rotation. Default is 10485760 (10MB)",

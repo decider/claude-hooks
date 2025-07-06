@@ -3,7 +3,7 @@
 # Claude Hooks Log Cleaner
 # Cleans old log files and manages log rotation
 
-LOGS_DIR="${CLAUDE_LOGS_DIR:-$HOME/.claude/logs}"
+LOGS_DIR="${CLAUDE_LOGS_DIR:-$HOME/.local/share/claude-hooks/logs}"
 LOG_FILE="${CLAUDE_LOG_FILE:-$LOGS_DIR/hooks.log}"
 RETENTION_DAYS="${CLAUDE_LOG_RETENTION_DAYS:-7}"
 

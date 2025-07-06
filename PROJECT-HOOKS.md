@@ -83,7 +83,7 @@ If you need to disable project hooks temporarily:
 ### 3. Clean Code Validator  
 - **Trigger**: After Write/Edit/MultiEdit operations
 - **Purpose**: Validates function length, complexity, etc.
-- **Config**: Edit `.claude/hooks/clean-code-rules.json`
+- **Config**: Edit `./claude/hooks/clean-code-rules.json`
 
 ### 4. Pre-Completion Quality Check
 - **Trigger**: Before marking tasks complete or committing
@@ -100,7 +100,7 @@ If you need to disable project hooks temporarily:
 ### Hooks Not Working?
 1. Ensure you're using the latest version of Claude Code
 2. Check that `claude/settings.json` exists in the project
-3. Verify hook scripts are executable: `ls -la ~/.claude/hooks/*.sh`
+3. Verify hook scripts are executable: `ls -la ./claude/hooks/*.sh`
 4. Run the setup script: `./claude/setup-hooks.sh`
 
 ### Want User-Level Hooks Instead?

@@ -44,7 +44,7 @@ cat > claude/setup-hooks.sh << 'EOF'
 
 set -e
 
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="$HOME/claude"
 PROJECT_DIR="$(pwd)"
 
 echo "🔧 Setting up project-specific Claude Hooks..."

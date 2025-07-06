@@ -6,23 +6,23 @@
         "tool": "Bash",
         "pattern": "^(npm\\s+(install|i)|yarn\\s+add)\\s+",
         "hooks": {
-          "preToolUse": "~/.claude/hooks/check-package-age.sh"
+          "preToolUse": "./claude/hooks/check-package-age.sh"
         }
       },
       {
         "tool": "Bash",
         "pattern": "^git\\s+commit",
         "hooks": {
-          "preToolUse": "~/.claude/hooks/pre-commit-check.sh"
+          "preToolUse": "./claude/hooks/pre-commit-check.sh"
         }
       },
       {
         "tool": "Write|Edit|MultiEdit",
         "hooks": {
-          "preToolUse": "~/.claude/hooks/code-quality-primer.sh",
+          "preToolUse": "./claude/hooks/code-quality-primer.sh",
           "postToolUse": [
-            "~/.claude/hooks/code-quality-validator.sh",
-            "~/.claude/hooks/post-write.sh"
+            "./claude/hooks/code-quality-validator.sh",
+            "./claude/hooks/post-write.sh"
           ]
         }
       },
@@ -30,19 +30,19 @@
         "tool": "TodoWrite",
         "pattern": "\"status\":\\s*\"completed\"",
         "hooks": {
-          "preToolUse": "~/.claude/hooks/pre-completion-check.sh"
+          "preToolUse": "./claude/hooks/pre-completion-check.sh"
         }
       },
       {
         "tool": "*",
         "hooks": {
-          "postToolUse": "~/.claude/hooks/task-completion-notify.sh"
+          "postToolUse": "./claude/hooks/task-completion-notify.sh"
         }
       }
     ],
-    "stop": "~/.claude/hooks/task-completion-notify.sh"
+    "stop": ["./claude/hooks/stop-validation.sh", "./claude/hooks/task-completion-notify.sh"]
   },
-  "_comment": "Copy this file to ~/.claude/settings.json and run the setup script: .claude/setup-hooks.sh",
+  "_comment": "Copy this file to ./claude/settings.json and run the setup script: ./claude/setup-hooks.sh",
   "_logging_levels": ["DEBUG", "INFO", "WARN", "ERROR"],
   "_logging_info": {
     "enabled": "Enable or disable logging (true/false)",
