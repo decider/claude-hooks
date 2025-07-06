@@ -35,7 +35,8 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q "typescript" "$PROJECT_ROOT/pa
         echo "$TS_OUTPUT" >&2
         echo -e "${YELLOW}Fix these errors before committing.${NC}" >&2
         
-        # Also log to hook logs
+        # Also log to hook logs with enhanced context
+        log_error_context "$HOOK_NAME" "TypeScript compilation failed" "npx tsc --noEmit" "$TS_OUTPUT"
         log_error "$HOOK_NAME" "TypeScript errors found"
         log_decision "$HOOK_NAME" "block" "TypeScript compilation failed"
         log_hook_end "$HOOK_NAME" 1
@@ -53,7 +54,8 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint"' "$PROJECT_ROOT/packag
         echo "$LINT_OUTPUT" >&2
         echo -e "${YELLOW}Fix linting errors before committing.${NC}" >&2
         
-        # Also log to hook logs
+        # Also log to hook logs with enhanced context
+        log_error_context "$HOOK_NAME" "Linting failed" "npm run lint" "$LINT_OUTPUT"
         log_error "$HOOK_NAME" "Linting errors found"
         log_decision "$HOOK_NAME" "block" "Linting failed"
         log_hook_end "$HOOK_NAME" 1
