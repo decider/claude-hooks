@@ -11,13 +11,14 @@ import {
   HookStats, 
   HookStatDisplay 
 } from '../types.js';
+import { SETTINGS_LOCATIONS } from '../settings-locations.js';
 
 // Available hooks from the npm package
 const AVAILABLE_HOOKS: HookConfigs = {
   'check-package-age': {
     event: 'PreToolUse',
     matcher: 'Bash',
-    pattern: '^(npm\\s+(install|i)|yarn\\s+add)\\s+',
+    pattern: '^(npm\\s+(install|i|add)|yarn\\s+(add|install))\\s+',
     description: 'Prevents installation of outdated npm/yarn packages'
   },
   'code-quality-primer': {
@@ -73,41 +74,6 @@ const AVAILABLE_HOOKS: HookConfigs = {
   }
 };
 
-// Settings file locations
-const SETTINGS_LOCATIONS: SettingsLocation[] = [
-  { 
-    path: './.claude/settings.json',
-    dir: './.claude',
-    file: 'settings.json',
-    display: '.claude/settings.json',
-    description: 'Team settings - git tracked',
-    level: 'project'
-  },
-  { 
-    path: './claude/settings.json',
-    dir: './claude',
-    file: 'settings.json',
-    display: 'claude/settings.json',
-    description: 'Team settings - git tracked, no dot prefix',
-    level: 'project-alt'
-  },
-  { 
-    path: './.claude/settings.local.json',
-    dir: './.claude',
-    file: 'settings.local.json',
-    display: '.claude/settings.local.json',
-    description: 'Personal settings - git ignored',
-    level: 'local'
-  },
-  { 
-    path: `${process.env.HOME}/.claude/settings.json`,
-    dir: `${process.env.HOME}/.claude`,
-    file: 'settings.json',
-    display: '~/.claude/settings.json',
-    description: 'Global - all projects',
-    level: 'global'
-  }
-];
 
 // Helper function to extract hook name from command
 function extractHookName(command: string): string | null {
