@@ -1,5 +1,5 @@
 {
-  "_comment_logging": "Logging is ON by default. Add a 'logging' section only if you want to customize or disable it",
+  "_comment": "Claude Code hooks configuration (using claude-code-hooks-cli)",
   "hooks": {
     "PreToolUse": [
       {
@@ -8,17 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./claude/hooks/check-package-age.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "pattern": "^git\\s+commit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./claude/hooks/pre-commit-check.sh"
+            "command": "npx claude-code-hooks-cli exec check-package-age"
           }
         ]
       },
@@ -27,17 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./claude/hooks/code-quality-primer.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "TodoWrite",
-        "pattern": "\"status\":\\s*\"completed\"",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./claude/hooks/pre-completion-check.sh"
+            "command": "npx claude-code-hooks-cli exec code-quality-primer"
           }
         ]
       }
@@ -48,20 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./claude/hooks/code-quality-validator.sh"
-          },
-          {
-            "type": "command",
-            "command": "./claude/hooks/post-write.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./claude/hooks/task-completion-notify.sh"
+            "command": "npx claude-code-hooks-cli exec code-quality-validator"
           }
         ]
       }
@@ -71,23 +38,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./claude/hooks/stop-validation.sh"
-          },
-          {
-            "type": "command",
-            "command": "./claude/hooks/task-completion-notify.sh"
+            "command": "npx claude-code-hooks-cli exec stop-validation"
           }
         ]
       }
     ]
-  },
-  "_comment": "Claude Code hooks configuration following official format",
-  "_logging_levels": ["DEBUG", "INFO", "WARN", "ERROR"],
-  "_logging_info": {
-    "enabled": "Enable or disable logging (true/false)",
-    "level": "Minimum log level to record (DEBUG shows all)",
-    "path": "Path to log file (use ~ for home directory)",
-    "maxSize": "Maximum log file size in bytes before rotation (10MB default)",
-    "retention": "Number of days to keep old log files"
   }
 }
