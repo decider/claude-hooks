@@ -1,4 +1,11 @@
 {
+  "logging": {
+    "enabled": true,
+    "level": "INFO",
+    "path": "~/.claude/logs/hooks.log",
+    "maxSize": 10485760,
+    "retention": 7
+  },
   "toolHooks": {
     "matchers": [
       {
@@ -41,5 +48,13 @@
     ],
     "stop": "~/.claude/hooks/task-completion-notify.sh"
   },
-  "_comment": "Copy this file to ~/.claude/settings.json and run the setup script: .claude/setup-hooks.sh"
+  "_comment": "Copy this file to ~/.claude/settings.json and run the setup script: .claude/setup-hooks.sh",
+  "_logging_levels": ["DEBUG", "INFO", "WARN", "ERROR"],
+  "_logging_info": {
+    "enabled": "Enable or disable logging (true/false)",
+    "level": "Minimum log level to record (DEBUG shows all)",
+    "path": "Path to log file (use ~ for home directory)",
+    "maxSize": "Maximum log file size in bytes before rotation (10MB default)",
+    "retention": "Number of days to keep old log files"
+  }
 }

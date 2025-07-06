@@ -89,6 +89,51 @@ export STRICT_MODE=false            # Strict quality checks
 | `pre-commit-check.sh` | Runs tests/lints | Before git commit |
 | `claude-context-updater.sh` | Updates CLAUDE.md files | Various triggers |
 
+## 📊 Logging
+
+All hooks support comprehensive logging for debugging and monitoring.
+
+### Configuration
+
+Add to your `settings.json`:
+
+```json
+{
+  "logging": {
+    "enabled": true,
+    "level": "INFO",
+    "path": "~/.claude/logs/hooks.log",
+    "maxSize": 10485760,
+    "retention": 7
+  }
+}
+```
+
+### Log Levels
+
+- `DEBUG`: Detailed information including inputs/outputs
+- `INFO`: General information about hook execution
+- `WARN`: Warnings about potential issues
+- `ERROR`: Error conditions
+
+### Log Management Tools
+
+```bash
+# View logs interactively
+~/.claude/tools/view-logs.sh
+
+# Clean old logs
+~/.claude/tools/clean-logs.sh
+```
+
+### Log Format
+
+```
+[2025-01-07 10:23:45] [INFO] [check-package-age] Hook started
+[2025-01-07 10:23:45] [WARN] [check-package-age] Package lodash@3.10.1 is 2835 days old (limit: 180)
+[2025-01-07 10:23:45] [INFO] [check-package-age] Hook completed with exit code 1
+```
+
 ## 🔄 Updating
 
 To get the latest hooks:

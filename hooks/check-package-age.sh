@@ -3,6 +3,14 @@
 # Claude Code Hook: Prevent installation of outdated packages
 # This hook intercepts npm/yarn install commands and validates package age
 
+# Source logging library
+HOOK_NAME="check-package-age"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common/logging.sh"
+
+# Start performance timing
+START_TIME=$(date +%s)
+
 # Check if we're in test mode
 TEST_MODE=${CLAUDE_HOOKS_TEST_MODE:-0}
 
@@ -10,21 +18,20 @@ TEST_MODE=${CLAUDE_HOOKS_TEST_MODE:-0}
 MAX_AGE_DAYS=${MAX_AGE_DAYS:-180}  # Default: 6 months
 CURRENT_DATE=$(date +%s)
 
-# Debug log
-echo "[$(date)] Hook called with input" >> /tmp/package-age-hook.log
-
 # Parse the hook input from stdin
 INPUT=$(cat)
-echo "[$(date)] Raw input: $INPUT" >> /tmp/package-age-hook.log
+log_hook_start "$HOOK_NAME" "$INPUT"
 
 TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty')
 COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
 DESCRIPTION=$(echo "$INPUT" | jq -r '.tool_input.description // "No description"')
 
-echo "[$(date)] Tool: $TOOL_NAME, Command: $COMMAND" >> /tmp/package-age-hook.log
+log_debug "$HOOK_NAME" "Tool: $TOOL_NAME, Command: $COMMAND"
 
 # Only process Bash tool calls
 if [ "$TOOL_NAME" != "Bash" ]; then
+    log_decision "$HOOK_NAME" "skip" "Not a Bash tool call"
+    log_hook_end "$HOOK_NAME" 0
     exit 0
 fi
 
@@ -45,6 +52,7 @@ check_package_age() {
     
     # Skip if it's a local file path or git URL
     if [[ "$package_spec" =~ ^(\.|\/|git\+|http|file:) ]]; then
+        log_debug "$HOOK_NAME" "Skipping non-npm package: $package_spec"
         return 0
     fi
     
@@ -67,6 +75,7 @@ check_package_age() {
     
     if [ $? -ne 0 ] || [ -z "$package_info" ]; then
         # If we can't fetch package info, allow installation (fail open)
+        log_warn "$HOOK_NAME" "Could not fetch package info for $package_name, allowing installation"
         return 0
     fi
     
@@ -110,9 +119,12 @@ check_package_age() {
             error_msg="$error_msg Latest version is ${latest_version} (${latest_age_days} days old)."
         fi
         
+        log_warn "$HOOK_NAME" "$error_msg"
         echo "$error_msg" >&2
         return 1
     fi
+    
+    log_info "$HOOK_NAME" "Package ${package_name}@${version} is ${age_days} days old (within ${MAX_AGE_DAYS} day limit)"
     
     return 0
 }
@@ -135,6 +147,7 @@ if [[ "$COMMAND" =~ ^npm[[:space:]]+install|^npm[[:space:]]+i[[:space:]]|^yarn[[
     
     # Check each package
     failed=false
+    log_info "$HOOK_NAME" "Checking ${#packages[@]} package(s) for age compliance"
     for pkg in "${packages[@]}"; do
         if ! check_package_age "$pkg"; then
             failed=true
@@ -143,7 +156,9 @@ if [[ "$COMMAND" =~ ^npm[[:space:]]+install|^npm[[:space:]]+i[[:space:]]|^yarn[[
     
     if [ "$failed" = true ]; then
         # Output error message to stderr for blocking
-        echo "One or more packages are too old. Please use newer versions or add them to the allowlist if absolutely necessary." >&2
+        local block_reason="One or more packages are too old. Please use newer versions or add them to the allowlist if absolutely necessary."
+        echo "$block_reason" >&2
+        log_decision "$HOOK_NAME" "block" "$block_reason"
         
         # Output JSON response to stdout for advanced control
         cat <<EOF
@@ -156,10 +171,17 @@ EOF
         # In test mode, don't actually block - just return success to allow tests to continue
         if [ "$TEST_MODE" = "1" ]; then
             echo "[TEST MODE] Would have blocked with exit code 2" >&2
+            log_info "$HOOK_NAME" "Test mode - would have blocked"
+            log_performance "$HOOK_NAME" $START_TIME
+            log_hook_end "$HOOK_NAME" 0
             exit 0
         else
+            log_performance "$HOOK_NAME" $START_TIME
+            log_hook_end "$HOOK_NAME" 2
             exit 2  # Exit code 2 blocks the action
         fi
+    else
+        log_decision "$HOOK_NAME" "allow" "All packages are within age limit"
     fi
 fi
 
@@ -167,7 +189,10 @@ fi
 if [[ "$COMMAND" =~ package\.json ]] || [[ "$DESCRIPTION" =~ package\.json ]]; then
     # For now, we'll allow package.json edits but log them
     echo "Notice: package.json edit detected. Ensure dependencies are up to date." >&2
+    log_info "$HOOK_NAME" "package.json edit detected - reminder to check dependency versions"
 fi
 
 # Allow the command to proceed
+log_performance "$HOOK_NAME" $START_TIME
+log_hook_end "$HOOK_NAME" 0
 exit 0
