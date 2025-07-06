@@ -102,7 +102,7 @@ log_hook_start() {
     local input=$2
     
     log_info "$hook_name" "Hook started"
-    if [ -n "$input" ] && [ "$CURRENT_LOG_LEVEL" -le "${LOG_LEVELS[DEBUG]}" ]; then
+    if [ -n "$input" ] && [ "$CURRENT_LOG_LEVEL" -le "$(get_log_level "DEBUG")" ]; then
         # Sanitize input for logging (remove sensitive data)
         local sanitized_input=$(echo "$input" | jq -r 'del(.secrets, .passwords, .tokens)' 2>/dev/null || echo "$input")
         log_debug "$hook_name" "Input: $sanitized_input"
