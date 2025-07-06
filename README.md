@@ -1,6 +1,6 @@
 # claude-code-hooks-cli
 
-Simple NPM package for Claude Code hooks - Run validation and quality checks in Claude.
+Professional NPM package for Claude Code hooks - TypeScript-based validation and quality checks.
 
 ## Installation
 
@@ -20,7 +20,7 @@ That's it! Hooks will run automatically in Claude Code.
 
 ## How It Works
 
-All hooks run directly from the npm package. Your settings.json will contain commands like:
+All hooks run directly from the npm package via TypeScript commands. Your `claude/settings.json` will contain commands like:
 
 ```json
 {
@@ -47,7 +47,7 @@ All hooks run directly from the npm package. Your settings.json will contain com
 ## Commands
 
 ### `npx claude-code-hooks-cli init`
-**Initialize Claude hooks** - Choose between quick setup or custom configuration.
+**Initialize Claude hooks** - TypeScript-powered interactive setup.
 
 **Interactive mode** (default):
 1. First prompts for setup mode:
@@ -58,39 +58,54 @@ All hooks run directly from the npm package. Your settings.json will contain com
 
 **Direct mode** with `--level <level>`:
 - Goes straight to quick setup at specified location
-- `project` - `.claude/settings.json`
-- `project-alt` - `claude/settings.json`
-- `local` - `.claude/settings.local.json`
+- `project` - `claude/settings.json` (recommended)
+- `project-alt` - `.claude/settings.json` (legacy)
+- `local` - `claude/settings.local.json`
 - `global` - `~/.claude/settings.json`
 
 ### `npx claude-code-hooks-cli manage`
-**Alias for custom setup** - Goes directly to the interactive hook manager.
+**Interactive hook manager** - TypeScript-based configuration interface.
 
 Same as running `init` and choosing "Custom setup". Use this when you want to skip the setup mode prompt.
 
 ### `npx claude-code-hooks-cli list`
-Show all available hooks with descriptions.
+Show all available hooks with descriptions (TypeScript compiled).
 
 ### `npx claude-code-hooks-cli exec <hook>`
 Execute a specific hook. This is used internally by Claude Code.
 
 ## Configuration Levels
 
-- **Project** (`.claude/settings.json`) - Shared with your team, committed to git
-- **Local** (`.claude/settings.local.json`) - Personal settings, git ignored
+- **Project** (`claude/settings.json`) - Shared with your team, committed to git (recommended)
+- **Legacy Project** (`.claude/settings.json`) - Old format, still supported
+- **Local** (`claude/settings.local.json`) - Personal settings, git ignored
 - **Global** (`~/.claude/settings.json`) - Applies to all your projects
 
 ## Benefits
 
+✅ **TypeScript-powered** - Full type safety and modern JavaScript features  
 ✅ **Always up-to-date** - Just run `npm update claude-code-hooks-cli`  
 ✅ **No file management** - Everything runs from node_modules  
 ✅ **Version locked** - Consistent behavior via package.json  
 ✅ **Works everywhere** - Compatible with npm, yarn, pnpm  
-✅ **Super simple** - One command setup  
+✅ **Interactive CLI** - Modern command-line interface with prompts  
+✅ **Project-local config** - Uses `claude/` directory (not `~/.claude`)  
+
+## Development
+
+This project uses TypeScript. To develop:
+
+```bash
+npm install
+npm run dev    # Watch mode
+npm run build  # Compile TypeScript
+```
+
+Source files are in `src/` and compiled to `lib/`.
 
 ## Contributing
 
-Contributions are welcome! Please check out the [claude-hooks repository](https://github.com/yourusername/claude-hooks).
+Contributions are welcome! This is a TypeScript project with modern tooling.
 
 ## License
 

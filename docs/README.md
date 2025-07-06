@@ -1,20 +1,32 @@
 # Claude Code Hooks Collection
 
-A comprehensive set of hooks designed to improve code quality and developer experience when using Claude Code.
+A comprehensive TypeScript-based set of hooks designed to improve code quality and developer experience when using Claude Code.
 
-## 🎯 Zero Configuration Philosophy
+## 🎯 Modern TypeScript Architecture
 
-Claude Hooks work immediately after installation with sensible defaults:
+Claude Hooks are now built with TypeScript and modern tooling:
+- ✅ **TypeScript-powered** - Full type safety and modern JavaScript features
+- ✅ **NPM package** - Install via `npm install -D claude-code-hooks-cli`
+- ✅ **Interactive CLI** - Modern command-line interface with prompts
+- ✅ **Project-local config** - Uses `claude/` directory structure
 - ✅ **Automatic logging** - All executions logged to `./claude/logs/hooks.log`
 - ✅ **Smart defaults** - Package validation, code quality checks pre-configured
-- ✅ **No setup needed** - Just install and start coding
 
-**You only need to create configuration files if you want to customize behavior.**
+**Installation is now a single npm command followed by `npx claude-code-hooks-cli init`.**
 
 ## Quick Start
 
-### Option 1: User-Level Installation (Recommended)
-Install hooks globally for use across all your projects:
+### NPM Installation (Recommended)
+Install as a development dependency:
+```bash
+npm install -D claude-code-hooks-cli
+npx claude-code-hooks-cli init
+```
+
+### Legacy Installation Methods
+These methods are still supported but not recommended:
+
+#### Option 1: User-Level Installation
 ```bash
 # Clone the repository
 git clone https://github.com/your-org/claude-hooks.git
@@ -24,14 +36,13 @@ cd claude-hooks
 ./scripts/install.sh
 ```
 
-### Option 2: Project-Level Installation
-Install hooks as a submodule in your project:
+#### Option 2: Project-Level Installation
 ```bash
 # In your project directory
 ./path/to/claude-hooks/scripts/install-project.sh
 ```
 
-### Option 3: Manual Installation
+#### Option 3: Manual Installation
 ```bash
 # Copy hooks to your Claude directory
 cp -r hooks ./claude/hooks
@@ -41,13 +52,23 @@ chmod +x ./claude/hooks/*.sh
 
 ## Installation Methods
 
-### User-Level Hooks (Recommended)
+### NPM Package (Recommended)
+- **Command**: `npm install -D claude-code-hooks-cli`
+- **Location**: Runs from `node_modules/`, config in `claude/settings.json`
+- **Scope**: Per-project via package.json
+- **Setup**: Run `npx claude-code-hooks-cli init`
+- **Customization**: Interactive CLI or edit `claude/settings.json`
+- **Benefits**: Version-locked, always up-to-date, TypeScript-powered
+
+### Legacy Methods (Still Supported)
+
+#### User-Level Hooks
 - **Location**: `./claude/hooks/` and `./claude/settings.json`
 - **Scope**: Apply to all your projects
 - **Setup**: Run `./scripts/install.sh`
 - **Customization**: Edit `./claude/settings.json` directly
 
-### Project-Level Hooks (Team Use)
+#### Project-Level Hooks (Team Use)
 - **Location**: `project/claude/hooks/` and `project/claude/settings.json`
 - **Scope**: Apply to all team members automatically
 - **Setup**: Use git submodule via `./scripts/install-project.sh`
@@ -183,13 +204,22 @@ Example Claude settings with all hooks configured.
 
 ## Customization
 
-### For User-Level Hooks
+### For NPM Package (Recommended)
+1. **Interactive CLI**: Run `npx claude-code-hooks-cli manage`
+2. **Edit Settings**: Modify `claude/settings.json` directly
+3. **Custom Rules**: Edit `claude/hooks/clean-code-rules.json`
+4. **Remove Hooks**: Use CLI manager or comment out hook entries
+5. **Environment Variables**: Set variables like `ENABLE_CODE_QUALITY_VALIDATOR=false`
+
+### For Legacy Installations
+
+#### User-Level Hooks
 1. **Edit Settings**: Modify `./claude/settings.json` directly
 2. **Custom Rules**: Edit `./claude/hooks/clean-code-rules.json`
 3. **Remove Hooks**: Comment out or delete hook entries in your settings.json
 4. **Environment Variables**: Set variables like `ENABLE_CODE_QUALITY_VALIDATOR=false`
 
-### For Project-Level Hooks
+#### Project-Level Hooks
 1. **Edit Project Settings**: Modify `project/claude/settings.json`
 2. **Custom Rules**: Edit `project/claude/hooks/clean-code-rules.json` (affects all team members)
 3. **Environment Variables**: Set in project environment or CI/CD
@@ -206,9 +236,11 @@ Edit similarity checker to add project-specific patterns.
 ## Troubleshooting
 
 ### Hooks Not Triggering
-1. Verify `./claude/settings.json` exists
-2. Check hook paths are correct
-3. Ensure hooks are executable: `chmod +x ./claude/hooks/*.sh`
+1. **NPM Package**: Verify `claude/settings.json` exists and contains `npx claude-code-hooks-cli exec` commands
+2. **Legacy**: Verify `./claude/settings.json` exists
+3. **Legacy**: Check hook paths are correct
+4. **Legacy**: Ensure hooks are executable: `chmod +x ./claude/hooks/*.sh`
+5. **All**: Run `npx claude-code-hooks-cli list` to verify package installation
 
 ### Performance Issues
 - Use `quick-index.sh` instead of full indexer
@@ -230,10 +262,12 @@ Edit similarity checker to add project-specific patterns.
 ## Contributing
 
 To add new hooks:
-1. Create hook script in this directory
-2. Add to `settings.example.json`
-3. Update setup script
-4. Document in this README
+1. **TypeScript**: Create hook command in `src/commands/`
+2. **Legacy**: Create hook script in `hooks/` directory
+3. Add to `settings.example.json`
+4. Update setup script and CLI
+5. Document in this README
+6. Run `npm run build` to compile TypeScript
 
 ## Resources
 
