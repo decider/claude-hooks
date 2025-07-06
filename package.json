@@ -1,0 +1,39 @@
+{
+  "name": "claude-code-hooks-cli",
+  "version": "1.2.1",
+  "description": "Claude Code hooks - Run validation and quality checks in Claude",
+  "main": "lib/index.js",
+  "bin": {
+    "claude-hooks": "./bin/claude-hooks.js"
+  },
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "echo \"No linting configured\" && exit 0"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "hooks",
+    "cli",
+    "validation",
+    "typescript",
+    "lint"
+  ],
+  "author": "Dan Seider",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0",
+    "chalk": "^5.3.0",
+    "inquirer": "^9.2.15"
+  },
+  "devDependencies": {},
+  "files": [
+    "bin/",
+    "lib/",
+    "hooks/"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
