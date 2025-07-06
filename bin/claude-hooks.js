@@ -4,6 +4,7 @@ import { program } from 'commander';
 import { exec } from '../lib/commands/exec.js';
 import { init } from '../lib/commands/init.js';
 import { list } from '../lib/commands/list.js';
+import { manage } from '../lib/commands/manage.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -36,6 +37,6 @@ program
 program
   .command('manage')
   .description('Interactively manage hooks in settings.json files')
-  .action(() => init({ customMode: true }));
+  .action(manage);
 
 program.parse();
