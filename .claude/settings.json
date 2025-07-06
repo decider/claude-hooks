@@ -1,0 +1,47 @@
+{
+  "_comment": "Claude Code hooks configuration (using claude-code-hooks-cli)",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "pattern": "^(npm\\s+(install|i|add)|yarn\\s+(add|install))\\s+",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec check-package-age"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec code-quality-primer"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec code-quality-validator"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec stop-validation"
+          }
+        ]
+      }
+    ]
+  }
+}
