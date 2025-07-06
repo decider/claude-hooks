@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="post-write"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Post-write hook for Claude Code
 # Runs after any file write operation to catch issues early
 
@@ -55,7 +43,3 @@ fi
 if [ -f "$HOOK_DIR/code-quality-validator.sh" ]; then
     "$HOOK_DIR/code-quality-validator.sh" "$FILE_PATH"
 fi
-
-# Log hook completion
-log_performance "$HOOK_NAME" $START_TIME
-log_hook_end "$HOOK_NAME" 0

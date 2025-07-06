@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="pre-completion-check"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Pre-completion check hook for Claude Code
 # This hook runs before Claude marks tasks as complete to ensure code quality
 
@@ -157,4 +145,3 @@ else
     echo -e "\n${RED}BLOCKING: Task cannot be marked as complete until all checks pass.${NC}"
     exit 1
 fi
-

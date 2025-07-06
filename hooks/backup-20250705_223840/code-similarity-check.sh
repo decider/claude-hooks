@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="code-similarity-check"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Code Similarity Check Utility
 # Analyzes code for similarities with existing codebase
 
@@ -191,7 +179,3 @@ main() {
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
     main "$@"
 fi
-
-# Log hook completion
-log_performance "$HOOK_NAME" $START_TIME
-log_hook_end "$HOOK_NAME" 0

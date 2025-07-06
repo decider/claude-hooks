@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="pre-completion-quality-check"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Pre-completion Quality Check Hook for Claude Code
 # This hook runs linting and tests before allowing task completion
 # to prevent committing code with errors
@@ -225,4 +213,3 @@ EOF
         exit 0
     fi
 fi
-

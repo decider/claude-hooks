@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="claude-context-updater"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Claude Context Updater Hook
 # Automatically maintains CLAUDE.md files based on code changes
 # Runs after file changes to create/update CLAUDE.md files
@@ -224,8 +212,3 @@ if [ -n "$FILE_PATH" ]; then
 fi
 
 echo -e "${GREEN}✅ Claude Context Updater complete!${NC}"
-
-# Log hook completion
-log_performance "$HOOK_NAME" $START_TIME
-log_hook_end "$HOOK_NAME" 0
-

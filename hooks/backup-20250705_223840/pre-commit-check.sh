@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="pre-commit-check"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Pre-commit check hook for Claude Code
 # Runs before git commit to ensure code quality
 
@@ -50,10 +38,4 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint"' "$PROJECT_ROOT/packag
 fi
 
 echo -e "${GREEN}✅ All pre-commit checks passed!${NC}"
-
-# Log hook completion
-log_performance "$HOOK_NAME" $START_TIME
-log_hook_end "$HOOK_NAME" 0
-
 exit 0
-

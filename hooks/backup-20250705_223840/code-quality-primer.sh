@@ -1,17 +1,5 @@
 #!/bin/bash
 
-
-# Source logging library
-HOOK_NAME="code-quality-primer"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
-
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
 # Claude Code Pre-Hook: Code Quality & Reuse Primer
 # Injects Clean Code principles and checks for existing code before creation
 
@@ -151,10 +139,4 @@ fi
 
 # Pass through the input
 echo "$INPUT"
-
-# Log hook completion
-log_performance "$HOOK_NAME" $START_TIME
-log_hook_end "$HOOK_NAME" 0
-
 exit 0
-
