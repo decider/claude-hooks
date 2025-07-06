@@ -20,7 +20,7 @@ The hooks will apply to all your projects automatically.
 
 1. Clone the claude-hooks repository somewhere on your machine:
    ```bash
-   git clone https://github.com/your-org/claude-hooks.git ~/claude-hooks
+   git clone https://github.com/decider/claude-hooks.git ~/claude-hooks
    ```
 
 2. In your project, create an installation script:
@@ -41,7 +41,7 @@ The hooks will apply to all your projects automatically.
 
 1. Add claude-hooks as a submodule:
    ```bash
-   git submodule add https://github.com/your-org/claude-hooks.git claude-hooks
+   git submodule add https://github.com/decider/claude-hooks.git claude-hooks
    ```
 
 2. Copy hooks to your project:
@@ -55,7 +55,48 @@ The hooks will apply to all your projects automatically.
    ./claude-hooks/scripts/install-project.sh
    ```
 
-### Method C: NPM/Yarn Package (Future)
+### Method C: Vendoring (Recommended for Teams)
+
+This approach copies claude-hooks directly into your project, ensuring all team members have the same version with zero external dependencies.
+
+1. Clone claude-hooks and copy to your project:
+   ```bash
+   git clone https://github.com/decider/claude-hooks.git ~/claude-hooks
+   cd /path/to/your/project
+   cp -r ~/claude-hooks ./claude-hooks
+   ```
+
+2. Copy the update script to your project:
+   ```bash
+   mkdir -p scripts
+   cp ~/claude-hooks/scripts/update-vendored.sh scripts/update-claude-hooks.sh
+   chmod +x scripts/update-claude-hooks.sh
+   ```
+
+3. Create a setup script at `claude/setup-hooks.sh`:
+   ```bash
+   #!/bin/bash
+   # Copy vendored hooks to user's ~/.claude directory
+   cp -r ./claude-hooks/hooks ~/.claude/
+   cp -r ./claude-hooks/tools ~/.claude/ 2>/dev/null || true
+   chmod +x ~/.claude/hooks/*.sh
+   echo "✅ Claude hooks installed from vendored copy!"
+   ```
+
+4. Add to your project's README:
+   ```markdown
+   ## Setup
+   Run `./claude/setup-hooks.sh` to install Claude Code hooks.
+   ```
+
+5. To update the vendored hooks:
+   ```bash
+   ./scripts/update-claude-hooks.sh
+   git add claude-hooks/
+   git commit -m "chore: update claude-hooks"
+   ```
+
+### Method D: NPM/Yarn Package (Future)
 
 Once published as an npm package:
 ```bash
@@ -73,6 +114,15 @@ git pull
 ```
 
 ### For Project-Level Integration
+
+For vendored approach:
+```bash
+./scripts/update-claude-hooks.sh
+git add claude-hooks/
+git commit -m "chore: update claude-hooks"
+```
+
+For other approaches:
 ```bash
 # Update from external repo
 cd ~/claude-hooks && git pull
