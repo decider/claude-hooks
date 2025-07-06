@@ -20,6 +20,29 @@
             "command": "npx claude-code-hooks-cli exec code-quality-primer"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec pre-commit-check"
+          },
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec pre-typescript-check"
+          }
+        ],
+        "matcher": "Bash",
+        "pattern": "^git\\s+commit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec pre-completion-quality-check"
+          }
+        ],
+        "matcher": "TodoWrite|Bash"
       }
     ],
     "PostToolUse": [
@@ -29,8 +52,34 @@
           {
             "type": "command",
             "command": "npx claude-code-hooks-cli exec code-quality-validator"
+          },
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec claude-context-updater"
+          },
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec code-similarity-check"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec task-completion-notify"
+          }
+        ],
+        "matcher": "TodoWrite"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec post-write"
+          }
+        ],
+        "matcher": "Write"
       }
     ],
     "Stop": [

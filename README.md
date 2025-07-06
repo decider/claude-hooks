@@ -47,19 +47,26 @@ All hooks run directly from the npm package. Your settings.json will contain com
 ## Commands
 
 ### `npx claude-code-hooks-cli init`
-Generate a settings.json file with recommended hooks.
+**Initialize Claude hooks** - Choose between quick setup or custom configuration.
 
-**Interactive mode** (default): Prompts you to choose from:
-- `.claude/settings.json` - Team settings (git tracked)
-- `claude/settings.json` - Team settings (no dot prefix)
-- `.claude/settings.local.json` - Personal settings (git ignored)
-- `~/.claude/settings.json` - Global (all projects)
+**Interactive mode** (default):
+1. First prompts for setup mode:
+   - **Quick setup** - Installs recommended hooks (4 defaults)
+   - **Custom setup** - Opens interactive manager to add/remove hooks
+
+2. Then prompts for location (shows existing hook counts)
 
 **Direct mode** with `--level <level>`:
+- Goes straight to quick setup at specified location
 - `project` - `.claude/settings.json`
 - `project-alt` - `claude/settings.json`
 - `local` - `.claude/settings.local.json`
 - `global` - `~/.claude/settings.json`
+
+### `npx claude-code-hooks-cli manage`
+**Alias for custom setup** - Goes directly to the interactive hook manager.
+
+Same as running `init` and choosing "Custom setup". Use this when you want to skip the setup mode prompt.
 
 ### `npx claude-code-hooks-cli list`
 Show all available hooks with descriptions.
