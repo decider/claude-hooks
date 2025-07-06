@@ -12,16 +12,19 @@ CLAUDE_LOG_ENABLED="${CLAUDE_LOG_ENABLED:-true}"  # ON by default
 CLAUDE_LOG_MAX_SIZE="${CLAUDE_LOG_MAX_SIZE:-10485760}"  # 10MB default
 CLAUDE_LOG_RETENTION_DAYS="${CLAUDE_LOG_RETENTION_DAYS:-7}"
 
-# Log levels
-declare -A LOG_LEVELS=(
-    ["DEBUG"]=0
-    ["INFO"]=1
-    ["WARN"]=2
-    ["ERROR"]=3
-)
+# Log levels - using case statement for compatibility with older bash
+get_log_level() {
+    case "$1" in
+        "DEBUG") echo 0 ;;
+        "INFO") echo 1 ;;
+        "WARN") echo 2 ;;
+        "ERROR") echo 3 ;;
+        *) echo 1 ;;
+    esac
+}
 
 # Get numeric value for current log level
-CURRENT_LOG_LEVEL="${LOG_LEVELS[$CLAUDE_LOG_LEVEL]:-1}"
+CURRENT_LOG_LEVEL=$(get_log_level "$CLAUDE_LOG_LEVEL")
 
 # Ensure log directory exists
 mkdir -p "$CLAUDE_LOGS_DIR"
@@ -53,7 +56,7 @@ log() {
     fi
     
     # Check log level
-    local level_value="${LOG_LEVELS[$level]:-1}"
+    local level_value=$(get_log_level "$level")
     if [ "$level_value" -lt "$CURRENT_LOG_LEVEL" ]; then
         return 0
     fi
@@ -163,7 +166,7 @@ load_logging_config() {
             [ -n "$retention" ] && [ "$retention" != "null" ] && CLAUDE_LOG_RETENTION_DAYS="$retention"
             
             # Update current log level
-            CURRENT_LOG_LEVEL="${LOG_LEVELS[$CLAUDE_LOG_LEVEL]:-1}"
+            CURRENT_LOG_LEVEL=$(get_log_level "$CLAUDE_LOG_LEVEL")
         fi
     fi
     # If no settings.json or no logging section, we just use the defaults

@@ -44,7 +44,13 @@ while true; do
     echo "  7) Search logs"
     echo "  q) Quit"
     echo ""
-    read -p "Select an option: " choice
+    read -p "Select an option: " choice || exit 0
+    
+    # Exit on empty input or EOF
+    if [ -z "$choice" ]; then
+        echo -e "${YELLOW}No input received. Exiting...${NC}"
+        exit 0
+    fi
 
     case $choice in
         1)

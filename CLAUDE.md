@@ -1,0 +1,1 @@
+- .ts over .js
