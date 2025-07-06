@@ -76,10 +76,10 @@ This approach copies claude-hooks directly into your project, ensuring all team 
 3. Create a setup script at `claude/setup-hooks.sh`:
    ```bash
    #!/bin/bash
-   # Copy vendored hooks to user's ~/.claude directory
-   cp -r ./claude-hooks/hooks ~/.claude/
-   cp -r ./claude-hooks/tools ~/.claude/ 2>/dev/null || true
-   chmod +x ~/.claude/hooks/*.sh
+   # Copy vendored hooks to user's ./claude directory
+   cp -r ./claude-hooks/hooks ./claude/
+   cp -r ./claude-hooks/tools ./claude/ 2>/dev/null || true
+   chmod +x ./claude/hooks/*.sh
    echo "✅ Claude hooks installed from vendored copy!"
    ```
 
@@ -139,7 +139,7 @@ cp -r claude-hooks/hooks/* claude/hooks/
 ## Configuration
 
 After installation, customize the hooks by editing:
-- **User-level**: `~/.claude/settings.json`
+- **User-level**: `./claude/settings.json`
 - **Project-level**: `./claude/settings.json`
 
 See [Configuration Guide](README.md#configuration) for details.

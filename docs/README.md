@@ -5,7 +5,7 @@ A comprehensive set of hooks designed to improve code quality and developer expe
 ## 🎯 Zero Configuration Philosophy
 
 Claude Hooks work immediately after installation with sensible defaults:
-- ✅ **Automatic logging** - All executions logged to `~/.claude/logs/hooks.log`
+- ✅ **Automatic logging** - All executions logged to `./claude/logs/hooks.log`
 - ✅ **Smart defaults** - Package validation, code quality checks pre-configured
 - ✅ **No setup needed** - Just install and start coding
 
@@ -34,18 +34,18 @@ Install hooks as a submodule in your project:
 ### Option 3: Manual Installation
 ```bash
 # Copy hooks to your Claude directory
-cp -r hooks ~/.claude/hooks
-cp config/settings.example.json ~/.claude/settings.json
-chmod +x ~/.claude/hooks/*.sh
+cp -r hooks ./claude/hooks
+cp config/settings.example.json ./claude/settings.json
+chmod +x ./claude/hooks/*.sh
 ```
 
 ## Installation Methods
 
 ### User-Level Hooks (Recommended)
-- **Location**: `~/.claude/hooks/` and `~/.claude/settings.json`
+- **Location**: `./claude/hooks/` and `./claude/settings.json`
 - **Scope**: Apply to all your projects
 - **Setup**: Run `./scripts/install.sh`
-- **Customization**: Edit `~/.claude/settings.json` directly
+- **Customization**: Edit `./claude/settings.json` directly
 
 ### Project-Level Hooks (Team Use)
 - **Location**: `project/claude/hooks/` and `project/claude/settings.json`
@@ -103,7 +103,7 @@ export MAX_AGE_DAYS=180  # Default: 180 days
 
 **Usage**:
 ```bash
-~/.claude/hooks/code-similarity-check.sh "function content" ts
+./claude/hooks/code-similarity-check.sh "function content" ts
 ```
 
 ### 5. Task Completion Notifier (`task-completion-notify.sh`)
@@ -133,8 +133,8 @@ export MAX_AGE_DAYS=180  # Default: 180 days
 
 **Usage**:
 ```bash
-~/.claude/hooks/build-code-index.sh  # Full index (slower)
-~/.claude/hooks/quick-index.sh       # Quick statistics
+./claude/hooks/build-code-index.sh  # Full index (slower)
+./claude/hooks/quick-index.sh       # Quick statistics
 ```
 
 ### 8. Claude Context Updater (`claude-context-updater.sh`)
@@ -184,8 +184,8 @@ Example Claude settings with all hooks configured.
 ## Customization
 
 ### For User-Level Hooks
-1. **Edit Settings**: Modify `~/.claude/settings.json` directly
-2. **Custom Rules**: Edit `~/.claude/hooks/clean-code-rules.json`
+1. **Edit Settings**: Modify `./claude/settings.json` directly
+2. **Custom Rules**: Edit `./claude/hooks/clean-code-rules.json`
 3. **Remove Hooks**: Comment out or delete hook entries in your settings.json
 4. **Environment Variables**: Set variables like `ENABLE_CODE_QUALITY_VALIDATOR=false`
 
@@ -206,9 +206,9 @@ Edit similarity checker to add project-specific patterns.
 ## Troubleshooting
 
 ### Hooks Not Triggering
-1. Verify `~/.claude/settings.json` exists
+1. Verify `./claude/settings.json` exists
 2. Check hook paths are correct
-3. Ensure hooks are executable: `chmod +x ~/.claude/hooks/*.sh`
+3. Ensure hooks are executable: `chmod +x ./claude/hooks/*.sh`
 
 ### Performance Issues
 - Use `quick-index.sh` instead of full indexer

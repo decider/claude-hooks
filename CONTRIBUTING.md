@@ -35,7 +35,7 @@ To add a new hook:
      "matcher": "YourMatcher",
      "hooks": [{
        "type": "command",
-       "command": "~/.claude/hooks/my-new-hook.sh"
+       "command": "./claude/hooks/my-new-hook.sh"
      }]
    }
    ```

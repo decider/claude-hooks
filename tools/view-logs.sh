@@ -3,7 +3,7 @@
 # Claude Hooks Log Viewer
 # Interactive tool to view and analyze hook logs
 
-LOG_FILE="${CLAUDE_LOG_FILE:-$HOME/.claude/logs/hooks.log}"
+LOG_FILE="${CLAUDE_LOG_FILE:-$HOME/.local/share/claude-hooks/logs/hooks.log}"
 LINES_TO_SHOW=50
 
 # Colors

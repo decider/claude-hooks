@@ -56,7 +56,7 @@ The validator hook checks:
 ### 3. Code Index
 Build the index periodically:
 ```bash
-~/.claude/hooks/build-code-index.sh
+./claude/hooks/build-code-index.sh
 ```
 
 This creates a searchable database of:
@@ -85,7 +85,7 @@ This creates a searchable database of:
 
 ## Customizing Rules
 
-Edit `~/.claude/hooks/clean-code-rules.json` to adjust thresholds:
+Edit `./claude/hooks/clean-code-rules.json` to adjust thresholds:
 
 ```json
 {
@@ -99,7 +99,7 @@ Edit `~/.claude/hooks/clean-code-rules.json` to adjust thresholds:
 
 ## Best Practices
 
-1. **Run the indexer** regularly: `~/.claude/hooks/build-code-index.sh`
+1. **Run the indexer** regularly: `./claude/hooks/build-code-index.sh`
 2. **Check before creating**: Always verify similar code doesn't exist
 3. **Prefer composition**: Small functions composed together
 4. **Use descriptive names**: `calculateUserTotalScore` not `calc`
@@ -110,19 +110,19 @@ Edit `~/.claude/hooks/clean-code-rules.json` to adjust thresholds:
 
 ```bash
 # Build/rebuild the code index
-~/.claude/hooks/build-code-index.sh
+./claude/hooks/build-code-index.sh
 
 # Look up a function quickly
-~/.claude/hooks/lookup-function.sh formatDate
+./claude/hooks/lookup-function.sh formatDate
 
 # Check similarity of code snippet
-echo "function debounce(fn, delay) {}" | ~/.claude/hooks/code-similarity-check.sh -
+echo "function debounce(fn, delay) {}" | ./claude/hooks/code-similarity-check.sh -
 ```
 
 ## Troubleshooting
 
 ### Hooks not triggering
-Ensure your `~/.claude/settings.json` includes the hook configuration.
+Ensure your `./claude/settings.json` includes the hook configuration.
 
 ### Too many false positives
 Adjust thresholds in `clean-code-rules.json`.

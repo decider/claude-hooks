@@ -15,7 +15,7 @@ if [ ! -f "claude/hooks/check-package-age.sh" ]; then
 fi
 
 PROJECT_ROOT=$(pwd)
-CLAUDE_DIR="$HOME/.claude"
+CLAUDE_DIR="$HOME/claude"
 HOOKS_DIR="$CLAUDE_DIR/hooks"
 
 # Create directories
@@ -38,13 +38,13 @@ if [ -f "$CLAUDE_DIR/settings.json" ]; then
     echo "⚠️  Found existing settings.json"
     echo "   Please manually merge the settings from claude/settings.example.json"
     echo "   Or backup your current settings and run:"
-    echo "   cp claude/settings.example.json ~/.claude/settings.json"
+    echo "   cp claude/settings.example.json $HOME/claude/settings.json"
 else
     echo "📝 Creating settings.json..."
     cp "$PROJECT_ROOT/claude/settings.example.json" "$CLAUDE_DIR/settings.json"
     
     # Update paths in settings.json to use absolute paths
-    sed -i.bak "s|~/.claude/hooks/|$HOOKS_DIR/|g" "$CLAUDE_DIR/settings.json"
+    sed -i.bak "s|~/claude/hooks/|$HOOKS_DIR/|g" "$CLAUDE_DIR/settings.json"
     rm "$CLAUDE_DIR/settings.json.bak"
 fi
 
@@ -73,8 +73,8 @@ echo "   - Settings: $CLAUDE_DIR/settings.json"
 echo "   - Rules: $HOOKS_DIR/clean-code-rules.json"
 echo ""
 echo "💡 Tips:"
-echo "   - Rebuild index anytime: ~/.claude/hooks/build-code-index.sh"
-echo "   - Quick index: ~/.claude/hooks/quick-index.sh"
+echo "   - Rebuild index anytime: $HOME/claude/hooks/build-code-index.sh"
+echo "   - Quick index: $HOME/claude/hooks/quick-index.sh"
 echo "   - Customize rules in clean-code-rules.json"
 echo ""
 echo "🎉 Happy coding with Clean Code principles!"

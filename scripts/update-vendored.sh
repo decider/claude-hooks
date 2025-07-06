@@ -84,7 +84,7 @@ rsync -av \
     --exclude='.git' \
     --exclude='.gitignore' \
     --exclude='CLAUDE.local.md' \
-    --exclude='.claude' \
+    --exclude='claude' \
     "$CLAUDE_HOOKS_SOURCE/" "$CLAUDE_HOOKS_DEST/"
 
 # Make hooks executable
@@ -122,4 +122,4 @@ echo ""
 echo -e "${YELLOW}📚 Next steps:${NC}"
 echo "  1. Review the changes with: git diff $CLAUDE_HOOKS_DEST/"
 echo "  2. Run setup if needed: ./claude/setup-hooks.sh"
-echo "  3. Check logs at: ~/.claude/logs/hooks.log"
+echo "  3. Check logs at: $HOME/claude/logs/hooks.log"

@@ -81,7 +81,7 @@
       }
     ]
   },
-  "_comment": "Copy this file to ./claude/settings.json and run the setup script: ./claude/setup-hooks.sh",
+  "_comment": "Claude Code hooks configuration following official format",
   "_logging_levels": ["DEBUG", "INFO", "WARN", "ERROR"],
   "_logging_info": {
     "enabled": "Enable or disable logging (true/false)",

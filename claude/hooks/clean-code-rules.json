@@ -1,0 +1,115 @@
+{
+  "rules": {
+    "maxFunctionLines": 20,
+    "maxFileLines": 100,
+    "maxComponentFileLines": 150,
+    "maxCyclomaticComplexity": 5,
+    "maxNestingDepth": 3,
+    "maxParameters": 3,
+    "maxClassMethods": 5,
+    "maxLineLength": 80,
+    "allowedMagicNumbers": [0, 1, -1, 100, 1000],
+    "maxCommentRatio": 0.2,
+    "maxDuplicateThreshold": 5
+  },
+  "reuse": {
+    "checkForSimilarFunctions": true,
+    "similarityThreshold": 0.8,
+    "enforceUtilityUsage": true,
+    "commonPatterns": [
+      "debounce",
+      "throttle", 
+      "deepClone",
+      "formatDate",
+      "parseDate",
+      "camelCase",
+      "snakeCase",
+      "kebabCase",
+      "isEmpty",
+      "isNil",
+      "chunk",
+      "groupBy"
+    ],
+    "preferredLibraries": {
+      "dates": ["date-fns", "@/utils/dateHelpers"],
+      "utilities": ["lodash-es", "@/utils", "@/helpers"],
+      "validation": ["zod", "@/validators"],
+      "api": ["@/api", "@/services"],
+      "hooks": ["@/hooks", "react"],
+      "types": ["@/types", "@pbx/types"]
+    },
+    "existingUtilPaths": [
+      "src/utils",
+      "src/helpers",
+      "src/api/converters.ts",
+      "packages/types",
+      "src/hooks"
+    ]
+  },
+  "principles": {
+    "DRY": {
+      "enabled": true,
+      "description": "Don't Repeat Yourself - reuse existing code"
+    },
+    "SOLID": {
+      "singleResponsibility": {
+        "enabled": true,
+        "description": "A class/function should have one reason to change"
+      },
+      "openClosed": {
+        "enabled": true,
+        "description": "Open for extension, closed for modification"
+      },
+      "liskovSubstitution": {
+        "enabled": true,
+        "description": "Subtypes must be substitutable for base types"
+      },
+      "interfaceSegregation": {
+        "enabled": true,
+        "description": "Clients shouldn't depend on unused interfaces"
+      },
+      "dependencyInversion": {
+        "enabled": true,
+        "description": "Depend on abstractions, not concretions"
+      }
+    },
+    "KISS": {
+      "enabled": true,
+      "description": "Keep It Simple, Stupid - avoid unnecessary complexity"
+    },
+    "YAGNI": {
+      "enabled": true,
+      "description": "You Aren't Gonna Need It - don't add functionality until needed"
+    }
+  },
+  "languageSpecific": {
+    "typescript": {
+      "preferConst": true,
+      "avoidAny": true,
+      "useStrictTypes": true,
+      "preferFunctionalComponents": true,
+      "avoidClassComponents": true,
+      "preferHooks": true
+    },
+    "rust": {
+      "avoidUnwrap": true,
+      "useResultType": true,
+      "preferMatchOverIf": true,
+      "maxLifetimes": 2
+    }
+  },
+  "codeSmells": {
+    "detectLongParameterList": true,
+    "detectLargeClass": true,
+    "detectDuplicateCode": true,
+    "detectDeadCode": true,
+    "detectGodFunction": true,
+    "detectFeatureEnvy": true
+  },
+  "suggestions": {
+    "provideSuggestions": true,
+    "autoFixSimpleIssues": false,
+    "showExamples": true,
+    "linkToResources": true
+  }
+}
