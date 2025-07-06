@@ -99,6 +99,13 @@ check_typescript() {
         local error_count=$(echo "$output" | grep -c "error TS" || echo "0")
         TYPESCRIPT_ERRORS+=("$project_name: $error_count errors")
         FAILED_CHECKS+=("TypeScript in $dir")
+        
+        # Output detailed error to stderr for better visibility
+        echo "❌ TypeScript errors in $project_name ($error_count errors):" >&2
+        echo "$output" >&2
+        echo "" >&2
+        
+        log_error_context "$HOOK_NAME" "TypeScript compilation failed" "$tsc_cmd" "$output"
         log_error "$HOOK_NAME" "TypeScript failed in $dir with $error_count errors"
         
         # Store first few errors for reporting
@@ -137,6 +144,13 @@ check_lint() {
         if [ $exit_code -ne 0 ]; then
             LINT_ERRORS+=("$project_name: lint failed")
             FAILED_CHECKS+=("Lint in $dir")
+            
+            # Output detailed error to stderr for better visibility
+            echo "❌ Lint errors in $project_name:" >&2
+            echo "$output" >&2
+            echo "" >&2
+            
+            log_error_context "$HOOK_NAME" "Lint check failed" "npm run lint" "$output"
             log_error "$HOOK_NAME" "Lint failed in $dir"
             return 1
         else

@@ -31,9 +31,15 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q "typescript" "$PROJECT_ROOT/pa
     TS_OUTPUT=$(npx tsc --noEmit 2>&1 || true)
     
     if echo "$TS_OUTPUT" | grep -q "error TS"; then
-        echo -e "${RED}❌ TypeScript errors found! Cannot commit.${NC}"
-        echo "$TS_OUTPUT"
-        echo -e "${YELLOW}Fix these errors before committing.${NC}"
+        echo -e "${RED}❌ TypeScript errors found! Cannot commit.${NC}" >&2
+        echo "$TS_OUTPUT" >&2
+        echo -e "${YELLOW}Fix these errors before committing.${NC}" >&2
+        
+        # Also log to hook logs with enhanced context
+        log_error_context "$HOOK_NAME" "TypeScript compilation failed" "npx tsc --noEmit" "$TS_OUTPUT"
+        log_error "$HOOK_NAME" "TypeScript errors found"
+        log_decision "$HOOK_NAME" "block" "TypeScript compilation failed"
+        log_hook_end "$HOOK_NAME" 1
         exit 1
     fi
 fi
@@ -42,9 +48,17 @@ fi
 if [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint"' "$PROJECT_ROOT/package.json"; then
     echo "Running linter..."
     
-    if ! npm run lint &> /dev/null; then
-        echo -e "${RED}❌ Linting errors found!${NC}"
-        echo -e "${YELLOW}Run 'npm run lint' to see details.${NC}"
+    LINT_OUTPUT=$(npm run lint 2>&1 || true)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Linting errors found!${NC}" >&2
+        echo "$LINT_OUTPUT" >&2
+        echo -e "${YELLOW}Fix linting errors before committing.${NC}" >&2
+        
+        # Also log to hook logs with enhanced context
+        log_error_context "$HOOK_NAME" "Linting failed" "npm run lint" "$LINT_OUTPUT"
+        log_error "$HOOK_NAME" "Linting errors found"
+        log_decision "$HOOK_NAME" "block" "Linting failed"
+        log_hook_end "$HOOK_NAME" 1
         exit 1
     fi
 fi

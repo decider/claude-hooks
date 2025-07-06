@@ -64,7 +64,17 @@ if [ $TSC_EXIT_CODE -ne 0 ]; then
     # Get first few errors as examples
     FIRST_ERRORS=$(echo "$TSC_OUTPUT" | grep "error TS" | head -3)
     
+    # Output detailed error information to stderr
+    echo "❌ TypeScript compilation failed with $ERROR_COUNT errors:" >&2
+    echo "$TSC_OUTPUT" >&2
+    echo "" >&2
+    echo "Top error types:" >&2
+    echo "$UNIQUE_ERRORS" >&2
+    echo "" >&2
+    echo "Run '$TSC_COMMAND' to see all errors." >&2
+    
     # Log the failure
+    log_error_context "$HOOK_NAME" "TypeScript compilation failed" "$TSC_COMMAND" "$TSC_OUTPUT"
     log_error "$HOOK_NAME" "TypeScript compilation failed with $ERROR_COUNT errors"
     log_decision "$HOOK_NAME" "block" "TypeScript errors must be fixed before committing"
     
