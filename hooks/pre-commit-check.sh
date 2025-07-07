@@ -27,8 +27,57 @@ echo -e "${YELLOW}🔍 Running pre-commit checks...${NC}"
 if [ -f "$PROJECT_ROOT/package.json" ] && grep -q "typescript" "$PROJECT_ROOT/package.json"; then
     echo "Checking TypeScript types..."
     
-    # Run TypeScript check
-    TS_OUTPUT=$(npx tsc --noEmit 2>&1 || true)
+    # Build TypeScript command with filtering
+    TS_CMD="npx tsc --noEmit"
+    
+    # If exclude patterns are provided, skip TypeScript check for excluded directories
+    if [ -n "$HOOK_EXCLUDE" ]; then
+        # Check if we should skip TypeScript check entirely based on exclude patterns
+        IFS=',' read -ra EXCLUDE_PATTERNS <<< "$HOOK_EXCLUDE"
+        SKIP_TS_CHECK=false
+        
+        # For monorepo - if we're excluding certain apps, only check specific ones
+        if [ -n "$HOOK_INCLUDE" ]; then
+            # Run TypeScript only on included paths
+            echo "Running TypeScript check on included paths: $HOOK_INCLUDE"
+            TS_OUTPUT=""
+            IFS=',' read -ra INCLUDE_PATTERNS <<< "$HOOK_INCLUDE"
+            for pattern in "${INCLUDE_PATTERNS[@]}"; do
+                pattern=$(echo "$pattern" | xargs | sed 's/\*\*$//')  # trim whitespace and trailing **
+                if [ -d "$pattern" ] && [ -f "$pattern/tsconfig.json" ]; then
+                    echo "Checking TypeScript in $pattern..."
+                    PATTERN_OUTPUT=$(cd "$pattern" && npx tsc --noEmit 2>&1 || true)
+                    if [ -n "$PATTERN_OUTPUT" ]; then
+                        TS_OUTPUT="$TS_OUTPUT$PATTERN_OUTPUT"
+                    fi
+                fi
+            done
+        else
+            # Run default TypeScript check
+            TS_OUTPUT=$(npx tsc --noEmit 2>&1 || true)
+            
+            # Filter out errors from excluded paths
+            FILTERED_OUTPUT=""
+            while IFS= read -r line; do
+                SHOULD_INCLUDE=true
+                for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+                    pattern=$(echo "$pattern" | xargs)  # trim whitespace
+                    if echo "$line" | grep -q "$pattern"; then
+                        SHOULD_INCLUDE=false
+                        break
+                    fi
+                done
+                if [ "$SHOULD_INCLUDE" = true ]; then
+                    FILTERED_OUTPUT="$FILTERED_OUTPUT$line
+"
+                fi
+            done <<< "$TS_OUTPUT"
+            TS_OUTPUT="$FILTERED_OUTPUT"
+        fi
+    else
+        # No filtering - run TypeScript check normally
+        TS_OUTPUT=$(npx tsc --noEmit 2>&1 || true)
+    fi
     
     if echo "$TS_OUTPUT" | grep -q "error TS"; then
         echo -e "${RED}❌ TypeScript errors found! Cannot commit.${NC}" >&2
@@ -36,7 +85,7 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q "typescript" "$PROJECT_ROOT/pa
         echo -e "${YELLOW}Fix these errors before committing.${NC}" >&2
         
         # Also log to hook logs with enhanced context
-        log_error_context "$HOOK_NAME" "TypeScript compilation failed" "npx tsc --noEmit" "$TS_OUTPUT"
+        log_error_context "$HOOK_NAME" "TypeScript compilation failed" "$TS_CMD" "$TS_OUTPUT"
         log_error "$HOOK_NAME" "TypeScript errors found"
         log_decision "$HOOK_NAME" "block" "TypeScript compilation failed"
         log_hook_end "$HOOK_NAME" 1
