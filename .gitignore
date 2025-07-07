@@ -40,4 +40,7 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
-temp/lib/cli.*
+temp/
+
+# Compiled TypeScript output
+lib/
