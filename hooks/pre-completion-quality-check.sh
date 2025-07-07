@@ -99,7 +99,37 @@ if [ -f "package.json" ]; then
         
         # Run linting
         if [ "$RUN_LINT" = "true" ]; then
-            run_check "lint" "npm run lint 2>&1" "ESLint"
+            # Build lint command with file filtering
+            LINT_CMD="npm run lint"
+            if [ -n "$HOOK_FILES" ]; then
+                LINT_CMD="npm run lint -- $HOOK_FILES"
+            elif [ -n "$HOOK_INCLUDE" ]; then
+                # Find files matching include patterns
+                FILES_TO_LINT=""
+                IFS=',' read -ra PATTERNS <<< "$HOOK_INCLUDE"
+                for pattern in "${PATTERNS[@]}"; do
+                    pattern=$(echo "$pattern" | xargs)
+                    FOUND_FILES=$(find . -name "$pattern" -type f 2>/dev/null | grep -v node_modules | head -100)
+                    if [ -n "$FOUND_FILES" ]; then
+                        FILES_TO_LINT="$FILES_TO_LINT $FOUND_FILES"
+                    fi
+                done
+                if [ -n "$FILES_TO_LINT" ]; then
+                    FILES_TO_LINT=$(echo "$FILES_TO_LINT" | xargs)
+                    LINT_CMD="npm run lint -- $FILES_TO_LINT"
+                fi
+            fi
+            
+            # Apply exclude patterns
+            if [ -n "$HOOK_EXCLUDE" ] && [[ "$LINT_CMD" =~ " -- " ]]; then
+                IFS=',' read -ra EXCLUDE_PATTERNS <<< "$HOOK_EXCLUDE"
+                for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+                    pattern=$(echo "$pattern" | xargs)
+                    LINT_CMD=$(echo "$LINT_CMD" | sed "s| [^ ]*${pattern}[^ ]*||g")
+                done
+            fi
+            
+            run_check "lint" "$LINT_CMD 2>&1" "ESLint"
         fi
         
         # Run tests
@@ -122,9 +152,60 @@ if [ -f "package.json" ]; then
         # Run linting
         if [ "$RUN_LINT" = "true" ]; then
             if grep -q '"lint"' package.json; then
-                run_check "lint" "npm run lint 2>&1" "ESLint"
+                # Build lint command with file filtering
+                LINT_CMD="npm run lint"
+                if [ -n "$HOOK_FILES" ]; then
+                    LINT_CMD="npm run lint -- $HOOK_FILES"
+                elif [ -n "$HOOK_INCLUDE" ]; then
+                    # Find files matching include patterns
+                    FILES_TO_LINT=""
+                    IFS=',' read -ra PATTERNS <<< "$HOOK_INCLUDE"
+                    for pattern in "${PATTERNS[@]}"; do
+                        pattern=$(echo "$pattern" | xargs)
+                        FOUND_FILES=$(find . -name "$pattern" -type f 2>/dev/null | grep -v node_modules | head -100)
+                        if [ -n "$FOUND_FILES" ]; then
+                            FILES_TO_LINT="$FILES_TO_LINT $FOUND_FILES"
+                        fi
+                    done
+                    if [ -n "$FILES_TO_LINT" ]; then
+                        FILES_TO_LINT=$(echo "$FILES_TO_LINT" | xargs)
+                        LINT_CMD="npm run lint -- $FILES_TO_LINT"
+                    fi
+                fi
+                
+                # Apply exclude patterns
+                if [ -n "$HOOK_EXCLUDE" ] && [[ "$LINT_CMD" =~ " -- " ]]; then
+                    IFS=',' read -ra EXCLUDE_PATTERNS <<< "$HOOK_EXCLUDE"
+                    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+                        pattern=$(echo "$pattern" | xargs)
+                        LINT_CMD=$(echo "$LINT_CMD" | sed "s| [^ ]*${pattern}[^ ]*||g")
+                    done
+                fi
+                
+                run_check "lint" "$LINT_CMD 2>&1" "ESLint"
             elif [ -f ".eslintrc.json" ] || [ -f ".eslintrc.js" ] || [ -f "eslint.config.js" ]; then
-                run_check "lint" "npx eslint . 2>&1" "ESLint"
+                # Build eslint command with file filtering
+                ESLINT_CMD="npx eslint ."
+                if [ -n "$HOOK_FILES" ]; then
+                    ESLINT_CMD="npx eslint $HOOK_FILES"
+                elif [ -n "$HOOK_INCLUDE" ]; then
+                    # Find files matching include patterns
+                    FILES_TO_LINT=""
+                    IFS=',' read -ra PATTERNS <<< "$HOOK_INCLUDE"
+                    for pattern in "${PATTERNS[@]}"; do
+                        pattern=$(echo "$pattern" | xargs)
+                        FOUND_FILES=$(find . -name "$pattern" -type f 2>/dev/null | grep -v node_modules | head -100)
+                        if [ -n "$FOUND_FILES" ]; then
+                            FILES_TO_LINT="$FILES_TO_LINT $FOUND_FILES"
+                        fi
+                    done
+                    if [ -n "$FILES_TO_LINT" ]; then
+                        FILES_TO_LINT=$(echo "$FILES_TO_LINT" | xargs)
+                        ESLINT_CMD="npx eslint $FILES_TO_LINT"
+                    fi
+                fi
+                
+                run_check "lint" "$ESLINT_CMD 2>&1" "ESLint"
             fi
         fi
         

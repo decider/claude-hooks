@@ -40,4 +40,4 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
-temp/
+temp/lib/cli.*
