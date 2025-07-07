@@ -89,6 +89,13 @@ export async function exec(hookName: string, options?: any): Promise<void> {
   let input = '';
   process.stdin.setEncoding('utf8');
   
+  // Handle stdin errors to prevent crashes
+  process.stdin.on('error', (err: any) => {
+    if (err.code !== 'EPIPE' && isDebug) {
+      console.error(`[DEBUG] stdin read error: ${err.message}`);
+    }
+  });
+  
   const processHook = () => {
     // Log hook start to local file
     logToFile('INFO', hookName, 'Hook started');
@@ -133,11 +140,32 @@ export async function exec(hookName: string, options?: any): Promise<void> {
       process.stderr.write(output);
     });
 
-    // Write input to hook's stdin
-    if (input) {
-      hookProcess.stdin.write(input);
+    // Handle stdin errors to prevent EPIPE crashes
+    hookProcess.stdin.on('error', (err: any) => {
+      // Ignore EPIPE errors - they're expected when hooks exit quickly
+      if (err.code !== 'EPIPE') {
+        logToFile('ERROR', hookName, `stdin error: ${err.message}`);
+      }
+    });
+
+    // Write input to hook's stdin with error handling
+    try {
+      if (input && !hookProcess.stdin.destroyed) {
+        hookProcess.stdin.write(input, (err) => {
+          if (err && (err as any).code !== 'EPIPE') {
+            logToFile('ERROR', hookName, `Failed to write input: ${err.message}`);
+          }
+        });
+      }
+      if (!hookProcess.stdin.destroyed) {
+        hookProcess.stdin.end();
+      }
+    } catch (err: any) {
+      // Silently ignore EPIPE errors
+      if (err.code !== 'EPIPE') {
+        logToFile('ERROR', hookName, `stdin operation failed: ${err.message}`);
+      }
     }
-    hookProcess.stdin.end();
 
     // Wait for hook to complete
     hookProcess.on('exit', (code) => {
