@@ -211,7 +211,11 @@ if [ -n "$FILE_PATH" ]; then
         echo -e "${YELLOW}📁 Creating CLAUDE.md for directory: ${file_dir#$PROJECT_ROOT/}${NC}"
         
         content=$(generate_claude_md_content "$file_dir")
-        echo "$content" > "$file_dir/CLAUDE.md"
+        if ! echo "$content" > "$file_dir/CLAUDE.md"; then
+            echo -e "${RED}❌ Failed to create CLAUDE.md in ${file_dir#$PROJECT_ROOT/}${NC}" >&2
+            log_hook_end "$HOOK_NAME" 2
+            exit 2  # Block operation if CLAUDE.md creation fails
+        fi
         
         echo -e "${GREEN}✅ Created: $file_dir/CLAUDE.md${NC}"
     fi
@@ -219,7 +223,11 @@ if [ -n "$FILE_PATH" ]; then
     # Update existing CLAUDE.md if it exists
     if [ "$UPDATE_EXISTING_CLAUDE_MD" = "true" ] && [ -f "$file_dir/CLAUDE.md" ]; then
         echo -e "${YELLOW}🔄 Updating existing CLAUDE.md in: ${file_dir#$PROJECT_ROOT/}${NC}"
-        update_existing_claude_md "$file_dir/CLAUDE.md"
+        if ! update_existing_claude_md "$file_dir/CLAUDE.md"; then
+            echo -e "${RED}❌ Failed to update CLAUDE.md in ${file_dir#$PROJECT_ROOT/}${NC}" >&2
+            log_hook_end "$HOOK_NAME" 2
+            exit 2  # Block operation if CLAUDE.md update fails
+        fi
     fi
 fi
 

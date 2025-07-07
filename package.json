@@ -1,6 +1,6 @@
 {
   "name": "claude-code-hooks-cli",
-  "version": "2.1.4",
+  "version": "2.2.0",
   "description": "Claude Code hooks - Run validation and quality checks in Claude",
   "main": "lib/index.js",
   "bin": {

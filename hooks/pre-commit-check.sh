@@ -88,8 +88,8 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q "typescript" "$PROJECT_ROOT/pa
         log_error_context "$HOOK_NAME" "TypeScript compilation failed" "$TS_CMD" "$TS_OUTPUT"
         log_error "$HOOK_NAME" "TypeScript errors found"
         log_decision "$HOOK_NAME" "block" "TypeScript compilation failed"
-        log_hook_end "$HOOK_NAME" 1
-        exit 1
+        log_hook_end "$HOOK_NAME" 2
+        exit 2  # Block the commit
     fi
 fi
 
@@ -159,8 +159,8 @@ if [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint"' "$PROJECT_ROOT/packag
         log_error_context "$HOOK_NAME" "Linting failed" "$LINT_CMD" "$LINT_OUTPUT"
         log_error "$HOOK_NAME" "Linting errors found"
         log_decision "$HOOK_NAME" "block" "Linting failed"
-        log_hook_end "$HOOK_NAME" 1
-        exit 1
+        log_hook_end "$HOOK_NAME" 2
+        exit 2  # Block the commit
     fi
 fi
 
