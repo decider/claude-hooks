@@ -218,9 +218,22 @@ fi
 # Always pass through the input
 echo "$INPUT"
 
+# Track if validation failed
+VALIDATION_FAILED=0
+if [ -f "$FILE_PATH" ]; then
+    # Run validation again to get exit code
+    validate_file "$FILE_PATH" >/dev/null 2>&1
+    VALIDATION_FAILED=$?
+fi
+
 # Log hook completion
 log_performance "$HOOK_NAME" $START_TIME
-log_hook_end "$HOOK_NAME" 0
 
-exit 0
+if [ $VALIDATION_FAILED -gt 0 ]; then
+    log_hook_end "$HOOK_NAME" 2
+    exit 2  # Block the operation
+else
+    log_hook_end "$HOOK_NAME" 0
+    exit 0
+fi
 

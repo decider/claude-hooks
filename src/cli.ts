@@ -42,4 +42,9 @@ program
   .description('Interactively manage hooks in settings.json files')
   .action(manage);
 
+// Default to manage command if no arguments provided
+if (process.argv.length === 2) {
+  process.argv.push('manage');
+}
+
 program.parse();

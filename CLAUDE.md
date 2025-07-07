@@ -28,3 +28,41 @@ This project is distributed as `claude-code-hooks-cli` NPM package:
 - Legacy location: `.claude/settings.json` (still supported)
 - Personal settings: `claude/settings.local.json`
 - Global settings: `~/.claude/settings.json`
+
+## Commands
+## Commands
+- `npm run build` - tsc
+- `npm run dev` - tsc --watch
+- `npm run typecheck` - tsc --noEmit
+- `npm run prepublishOnly` - npm run build
+- `npm run test` - echo "No tests configured" && exit 0
+- `npm run lint` - echo "No linting configured" && exit 0
+- `npm run build` - tsc
+- `npm run dev` - tsc --watch
+- `npm run typecheck` - tsc --noEmit
+- `npm run prepublishOnly` - npm run build
+- `npm run test` - echo "No tests configured" && exit 0
+- `npm run lint` - echo "No linting configured" && exit 0
+
+
+## Dependencies
+## Dependencies
+- chalk@^5.3.0
+- commander@^11.0.0
+- inquirer@^9.2.15
+- chalk@^5.3.0
+- commander@^11.0.0
+- inquirer@^9.2.15
+
+
+## Architecture Notes
+
+- Updated on 2025-07-07
+- Simplified hook system with focus on essential validation
+- Improved error handling and exit codes
+- Added common validation library for shared functionality## Architecture Notes
+
+- Updated on 2025-07-07
+- Simplified hook system with focus on essential validation
+- Improved error handling and exit codes
+- Added common validation library for shared functionality

@@ -2,6 +2,9 @@
 
 Professional NPM package for Claude Code hooks - TypeScript-based validation and quality checks.
 
+[![npm version](https://badge.fury.io/js/claude-code-hooks-cli.svg)](https://www.npmjs.com/package/claude-code-hooks-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Installation
 
 ```bash
@@ -37,12 +40,18 @@ All hooks run directly from the npm package via TypeScript commands. Your `claud
 
 ## Available Hooks
 
-- **stop-validation** - Validates TypeScript and linting before allowing Claude to stop
-- **check-package-age** - Prevents installation of outdated npm/yarn packages  
+### Core Validation Hooks
+- **typescript-check** - Validates TypeScript code for type errors
+- **lint-check** - Runs ESLint/Prettier checks on your code
+- **test-check** - Executes your test suite to ensure code quality
 - **code-quality-validator** - Enforces clean code standards on file edits
-- **code-quality-primer** - Provides code quality context before edits
-- **pre-commit-check** - Runs checks before git commits
-- And more! Run `npx claude-code-hooks-cli list` to see all available hooks.
+
+### Utility Hooks
+- **check-package-age** - Prevents installation of outdated npm/yarn packages
+- **claude-context-updater** - Updates CLAUDE.md with project information
+- **task-completion-notify** - Notifies when tasks are completed
+
+Run `npx claude-code-hooks-cli list` to see all available hooks.
 
 ## Commands
 
@@ -80,6 +89,14 @@ Execute a specific hook. This is used internally by Claude Code.
 - **Legacy Project** (`.claude/settings.json`) - Old format, still supported
 - **Local** (`claude/settings.local.json`) - Personal settings, git ignored
 - **Global** (`~/.claude/settings.json`) - Applies to all your projects
+
+## What's New in v2.3.0
+
+- 🎯 **Simplified hook system** - Consolidated to essential validation hooks
+- 🛡️ **Improved error handling** - Better exit codes and error messages
+- 📁 **Common validation library** - Shared functionality for consistency
+- 🚀 **Enhanced CLI commands** - Better hook management experience
+- 🧹 **Removed deprecated hooks** - Cleaner, more focused hook set
 
 ## Benefits
 
