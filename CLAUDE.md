@@ -27,7 +27,9 @@ This project is distributed as `claude-code-hooks-cli` NPM package:
 - Preferred location: `claude/settings.json` (project-local)
 - Legacy location: `.claude/settings.json` (still supported)
 - Personal settings: `claude/settings.local.json`
-- Global settings: `~/.claude/settings.json`## Commands
+- Global settings: `~/.claude/settings.json`
+
+## Commands
 ## Commands
 - `npm run build` - tsc
 - `npm run dev` - tsc --watch
@@ -54,6 +56,13 @@ This project is distributed as `claude-code-hooks-cli` NPM package:
 
 
 ## Architecture Notes
-## Architecture Notes
+
 - Updated on 2025-07-07
+- Simplified hook system with focus on essential validation
+- Improved error handling and exit codes
+- Added common validation library for shared functionality## Architecture Notes
+
 - Updated on 2025-07-07
+- Simplified hook system with focus on essential validation
+- Improved error handling and exit codes
+- Added common validation library for shared functionality
