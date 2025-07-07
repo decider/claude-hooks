@@ -41,3 +41,6 @@ coverage/
 *.tmp
 *.temp
 temp/
+
+# Compiled TypeScript output
+lib/

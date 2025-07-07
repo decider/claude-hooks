@@ -1,6 +1,6 @@
 {
   "name": "claude-code-hooks-cli",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Claude Code hooks - Run validation and quality checks in Claude",
   "main": "lib/index.js",
   "bin": {
@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "echo \"No linting configured\" && exit 0"

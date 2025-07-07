@@ -6,7 +6,7 @@ import { existsSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export async function exec(hookName: string): Promise<void> {
+export async function exec(hookName: string, options?: any): Promise<void> {
   // Resolve hook path - try multiple locations
   const possiblePaths = [
     join(__dirname, '../../hooks', `${hookName}.sh`),
@@ -43,14 +43,28 @@ export async function exec(hookName: string): Promise<void> {
   process.stdin.setEncoding('utf8');
   
   const processHook = () => {
+    // Prepare environment variables with filtering options
+    const hookEnv: Record<string, string> = {
+      ...process.env,
+      HOOK_NAME: hookName,
+      HOOK_START_TIME: startTime.toString()
+    };
+
+    // Add filtering options if provided
+    if (options?.files) {
+      hookEnv.HOOK_FILES = options.files;
+    }
+    if (options?.exclude) {
+      hookEnv.HOOK_EXCLUDE = options.exclude;
+    }
+    if (options?.include) {
+      hookEnv.HOOK_INCLUDE = options.include;
+    }
+
     // Capture both stdout and stderr for better error reporting
     const hookProcess = spawn('bash', [hookPath!], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { 
-        ...process.env,
-        HOOK_NAME: hookName,
-        HOOK_START_TIME: startTime.toString()
-      }
+      env: hookEnv
     });
 
     let stdout = '';

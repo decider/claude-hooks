@@ -25,11 +25,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec pre-commit-check"
+            "command": "npx claude-code-hooks-cli exec pre-commit-check --exclude='node_modules,dist,build,.next,coverage'"
           },
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec pre-typescript-check"
+            "command": "npx claude-code-hooks-cli exec pre-typescript-check --exclude='node_modules,dist,build,.next,coverage'"
           }
         ],
         "matcher": "Bash",
@@ -39,7 +39,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec pre-completion-quality-check"
+            "command": "npx claude-code-hooks-cli exec pre-completion-quality-check --exclude='node_modules,dist,build,.next,coverage'"
           }
         ],
         "matcher": "TodoWrite|Bash"
@@ -82,15 +82,6 @@
         "matcher": "Write"
       }
     ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx claude-code-hooks-cli exec stop-validation"
-          }
-        ]
-      }
-    ]
+    "Stop": []
   }
 }

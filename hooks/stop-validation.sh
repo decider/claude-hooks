@@ -137,9 +137,54 @@ check_lint() {
     if [ -f "package.json" ] && grep -q '"lint"' package.json 2>/dev/null; then
         log_info "$HOOK_NAME" "Running lint in $dir"
         
+        # Build file list based on filtering options
+        local FILES_TO_LINT=""
+        local LINT_CMD="npm run lint"
+        
+        # If specific files are provided
+        if [ -n "$HOOK_FILES" ]; then
+            FILES_TO_LINT="$HOOK_FILES"
+            echo "Linting specific files in $project_name: $FILES_TO_LINT"
+        # If include patterns are provided, find matching files
+        elif [ -n "$HOOK_INCLUDE" ]; then
+            IFS=',' read -ra PATTERNS <<< "$HOOK_INCLUDE"
+            for pattern in "${PATTERNS[@]}"; do
+                pattern=$(echo "$pattern" | xargs)  # trim whitespace
+                FOUND_FILES=$(find . -name "$pattern" -type f 2>/dev/null | grep -v node_modules | head -100)
+                if [ -n "$FOUND_FILES" ]; then
+                    FILES_TO_LINT="$FILES_TO_LINT $FOUND_FILES"
+                fi
+            done
+        fi
+        
+        # Apply exclude patterns if provided
+        if [ -n "$HOOK_EXCLUDE" ] && [ -n "$FILES_TO_LINT" ]; then
+            IFS=',' read -ra EXCLUDE_PATTERNS <<< "$HOOK_EXCLUDE"
+            for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+                pattern=$(echo "$pattern" | xargs)  # trim whitespace
+                FILES_TO_LINT=$(echo "$FILES_TO_LINT" | tr ' ' '\n' | grep -v "$pattern" | tr '\n' ' ')
+            done
+        fi
+        
         local output
-        output=$(npm run lint 2>&1)
-        local exit_code=$?
+        local exit_code
+        
+        # Run lint command with filtered files
+        if [ -n "$FILES_TO_LINT" ]; then
+            # Trim whitespace and convert to array
+            FILES_TO_LINT=$(echo "$FILES_TO_LINT" | xargs)
+            if [ -n "$FILES_TO_LINT" ]; then
+                output=$(npm run lint -- $FILES_TO_LINT 2>&1)
+                exit_code=$?
+            else
+                echo "No files to lint after filtering in $project_name."
+                return 0
+            fi
+        else
+            # No filtering - run on all files (default behavior)
+            output=$(npm run lint 2>&1)
+            exit_code=$?
+        fi
         
         if [ $exit_code -ne 0 ]; then
             LINT_ERRORS+=("$project_name: lint failed")
@@ -150,7 +195,7 @@ check_lint() {
             echo "$output" >&2
             echo "" >&2
             
-            log_error_context "$HOOK_NAME" "Lint check failed" "npm run lint" "$output"
+            log_error_context "$HOOK_NAME" "Lint check failed" "$LINT_CMD" "$output"
             log_error "$HOOK_NAME" "Lint failed in $dir"
             return 1
         else

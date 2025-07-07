@@ -48,14 +48,66 @@ fi
 if [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint"' "$PROJECT_ROOT/package.json"; then
     echo "Running linter..."
     
-    LINT_OUTPUT=$(npm run lint 2>&1 || true)
-    if [ $? -ne 0 ]; then
+    # Prepare lint command with file filtering
+    LINT_CMD="npm run lint"
+    
+    # Build file list based on filtering options
+    FILES_TO_LINT=""
+    
+    # If specific files are provided
+    if [ -n "$HOOK_FILES" ]; then
+        FILES_TO_LINT="$HOOK_FILES"
+        echo "Linting specific files: $FILES_TO_LINT"
+    # If include patterns are provided, find matching files
+    elif [ -n "$HOOK_INCLUDE" ]; then
+        IFS=',' read -ra PATTERNS <<< "$HOOK_INCLUDE"
+        for pattern in "${PATTERNS[@]}"; do
+            pattern=$(echo "$pattern" | xargs)  # trim whitespace
+            FOUND_FILES=$(find . -name "$pattern" -type f 2>/dev/null | grep -v node_modules | head -100)
+            if [ -n "$FOUND_FILES" ]; then
+                FILES_TO_LINT="$FILES_TO_LINT $FOUND_FILES"
+            fi
+        done
+    # For git commits, check staged files
+    elif git rev-parse --git-dir > /dev/null 2>&1; then
+        STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\.(ts|tsx|js|jsx|vue|svelte)$' | head -50)
+        if [ -n "$STAGED_FILES" ]; then
+            FILES_TO_LINT="$STAGED_FILES"
+            echo "Linting staged files: $FILES_TO_LINT"
+        fi
+    fi
+    
+    # Apply exclude patterns if provided
+    if [ -n "$HOOK_EXCLUDE" ] && [ -n "$FILES_TO_LINT" ]; then
+        IFS=',' read -ra EXCLUDE_PATTERNS <<< "$HOOK_EXCLUDE"
+        for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+            pattern=$(echo "$pattern" | xargs)  # trim whitespace
+            FILES_TO_LINT=$(echo "$FILES_TO_LINT" | tr ' ' '\n' | grep -v "$pattern" | tr '\n' ' ')
+        done
+    fi
+    
+    # Run lint command with filtered files
+    if [ -n "$FILES_TO_LINT" ]; then
+        # Trim whitespace and convert to array
+        FILES_TO_LINT=$(echo "$FILES_TO_LINT" | xargs)
+        if [ -n "$FILES_TO_LINT" ]; then
+            LINT_OUTPUT=$(npm run lint -- $FILES_TO_LINT 2>&1 || true)
+        else
+            echo "No files to lint after filtering."
+            LINT_OUTPUT=""
+        fi
+    else
+        # No filtering - run on all files (default behavior)
+        LINT_OUTPUT=$(npm run lint 2>&1 || true)
+    fi
+    
+    if [ $? -ne 0 ] && [ -n "$LINT_OUTPUT" ]; then
         echo -e "${RED}❌ Linting errors found!${NC}" >&2
         echo "$LINT_OUTPUT" >&2
         echo -e "${YELLOW}Fix linting errors before committing.${NC}" >&2
         
         # Also log to hook logs with enhanced context
-        log_error_context "$HOOK_NAME" "Linting failed" "npm run lint" "$LINT_OUTPUT"
+        log_error_context "$HOOK_NAME" "Linting failed" "$LINT_CMD" "$LINT_OUTPUT"
         log_error "$HOOK_NAME" "Linting errors found"
         log_decision "$HOOK_NAME" "block" "Linting failed"
         log_hook_end "$HOOK_NAME" 1
