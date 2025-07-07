@@ -21,11 +21,16 @@ const DEFAULT_SETTINGS: HookSettings = {
         ]
       },
       {
-        "matcher": "Write|Edit|MultiEdit",
+        "matcher": "Bash",
+        "pattern": "^git\\s+commit",
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec code-quality-primer"
+            "command": "npx claude-code-hooks-cli exec typescript-check --exclude='node_modules,dist,build,.next,coverage'"
+          },
+          {
+            "type": "command",
+            "command": "CHECK_STAGED=true npx claude-code-hooks-cli exec lint-check --exclude='node_modules,dist,build,.next,coverage'"
           }
         ]
       }
@@ -37,20 +42,24 @@ const DEFAULT_SETTINGS: HookSettings = {
           {
             "type": "command",
             "command": "npx claude-code-hooks-cli exec code-quality-validator"
+          },
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec claude-context-updater"
+          }
+        ]
+      },
+      {
+        "matcher": "TodoWrite",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli exec task-completion-notify"
           }
         ]
       }
     ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx claude-code-hooks-cli exec stop-validation"
-          }
-        ]
-      }
-    ]
+    "Stop": []
   }
 };
 
