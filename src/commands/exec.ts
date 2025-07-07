@@ -1,10 +1,57 @@
 import { spawn } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, appendFileSync, mkdirSync } from 'fs';
+import { homedir } from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Local logging configuration
+const LOG_DIR = join(homedir(), '.local', 'share', 'claude-hooks', 'logs');
+const LOG_FILE = join(LOG_DIR, 'hooks.log');
+
+function ensureLogDir() {
+  try {
+    mkdirSync(LOG_DIR, { recursive: true });
+  } catch (err) {
+    // Ignore errors
+  }
+}
+
+function logToFile(level: string, hookName: string, message: string) {
+  try {
+    ensureLogDir();
+    const timestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
+    const logEntry = `[${timestamp}] [${level}] [${hookName}] ${message}\n`;
+    appendFileSync(LOG_FILE, logEntry);
+  } catch (err) {
+    // Silently fail - don't interfere with hook execution
+  }
+}
+
+function formatClaudeError(hookName: string, code: number | null, stderr: string, stdout: string, hookPath: string, duration: number): string {
+  // Ultra-compact error message for Claude
+  let message = `Hook '${hookName}' failed (exit ${code})`;
+  
+  // Analyze error and add inline action
+  if (stderr.includes('Usage:') || stderr.includes('usage:')) {
+    message += ' - Check hook arguments';
+  } else if (stderr.includes('command not found') || stderr.includes('not found')) {
+    message += ' - Install missing dependencies';
+  } else if (stderr.includes('permission denied')) {
+    message += ' - Check file permissions';
+  } else if (stderr.includes('npm') || stderr.includes('node')) {
+    message += ' - Run npm install';
+  }
+  
+  // Add stderr inline if short enough
+  if (stderr.trim() && stderr.length < 200) {
+    message += `: ${stderr.trim().replace(/\n/g, ' ')}`;
+  }
+  
+  return message;
+}
 
 export async function exec(hookName: string, options?: any): Promise<void> {
   // Resolve hook path - try multiple locations
@@ -43,6 +90,9 @@ export async function exec(hookName: string, options?: any): Promise<void> {
   process.stdin.setEncoding('utf8');
   
   const processHook = () => {
+    // Log hook start to local file
+    logToFile('INFO', hookName, 'Hook started');
+    
     // Prepare environment variables with filtering options
     const hookEnv: Record<string, string> = {
       ...process.env,
@@ -97,49 +147,43 @@ export async function exec(hookName: string, options?: any): Promise<void> {
         console.error(`[DEBUG] Hook '${hookName}' completed in ${duration}ms with exit code ${code}`);
       }
       
-      if (code !== 0) {
-        // Enhanced error reporting
-        console.error(`\n--- Hook Execution Summary ---`);
-        console.error(`Hook: ${hookName}`);
-        console.error(`Exit Code: ${code}`);
-        console.error(`Duration: ${duration}ms`);
-        console.error(`Working Directory: ${process.cwd()}`);
-        console.error(`Hook Path: ${hookPath}`);
-        
-        if (stdout.trim()) {
-          console.error(`\nStdout Output:`);
-          console.error(stdout.trim());
-        }
-        
+      // Log to local file
+      if (code === 0) {
+        logToFile('INFO', hookName, `Hook completed successfully (exit code: 0)`);
+      } else {
+        logToFile('ERROR', hookName, `Hook failed (exit code: ${code})`);
         if (stderr.trim()) {
-          console.error(`\nStderr Output:`);
-          console.error(stderr.trim());
-        } else {
-          console.error(`\nNo stderr output (this may indicate the hook is not properly reporting errors)`);
+          logToFile('ERROR', hookName, `Error output: ${stderr.trim()}`);
         }
-        
-        console.error(`\n--- End Hook Summary ---\n`);
+      }
+      
+      if (code !== 0) {
+        // Concise error reporting for Claude
+        const errorMessage = formatClaudeError(hookName, code, stderr, stdout, hookPath!, duration);
+        console.error(errorMessage);
       }
       
       process.exit(code || 0);
     });
 
     hookProcess.on('error', (err) => {
-      console.error(`\n--- Hook Execution Error ---`);
-      console.error(`Hook: ${hookName}`);
-      console.error(`Error: ${err.message}`);
-      console.error(`Working Directory: ${process.cwd()}`);
-      console.error(`Hook Path: ${hookPath}`);
-      console.error(`--- End Hook Error ---\n`);
+      // Log to local file
+      logToFile('ERROR', hookName, `Hook execution error: ${err.message}`);
+      
+      // Ultra-compact error for Claude
+      console.error(`Hook '${hookName}' execution error: ${err.message} - Check file exists and is executable`);
+      
       process.exit(1);
     });
 
     // Set a timeout for hook execution (5 minutes)
     const hookTimeout = setTimeout(() => {
-      console.error(`\n--- Hook Timeout ---`);
-      console.error(`Hook '${hookName}' timed out after 5 minutes`);
-      console.error(`Hook Path: ${hookPath}`);
-      console.error(`--- End Hook Timeout ---\n`);
+      // Log to local file
+      logToFile('ERROR', hookName, 'Hook timed out after 5 minutes');
+      
+      // Ultra-compact error for Claude
+      console.error(`Hook '${hookName}' timed out (5min) - May be stuck or waiting for input`);
+      
       hookProcess.kill('SIGKILL');
       process.exit(124); // Timeout exit code
     }, 5 * 60 * 1000);
