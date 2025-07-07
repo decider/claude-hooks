@@ -155,6 +155,6 @@ else
     
     # Block completion
     echo -e "\n${RED}BLOCKING: Task cannot be marked as complete until all checks pass.${NC}"
-    exit 1
+    exit 2  # Block task completion
 fi
 

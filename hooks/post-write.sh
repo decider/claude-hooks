@@ -37,9 +37,11 @@ if [[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx|py|go|rs)$ ]]; then
         TS_OUTPUT=$(npx tsc --noEmit "$FILE_PATH" 2>&1 || true)
         
         if echo "$TS_OUTPUT" | grep -q "error TS"; then
-            echo -e "${RED}❌ TypeScript errors detected:${NC}"
-            echo "$TS_OUTPUT" | grep "error TS" | head -5
-            echo -e "${YELLOW}Fix these errors before continuing!${NC}"
+            echo -e "${RED}❌ TypeScript errors detected:${NC}" >&2
+            echo "$TS_OUTPUT" | grep "error TS" | head -5 >&2
+            echo -e "${YELLOW}Fix these errors before continuing!${NC}" >&2
+            log_hook_end "$HOOK_NAME" 2
+            exit 2  # Block operation due to TypeScript errors
         else
             echo -e "${GREEN}✓ No TypeScript errors${NC}"
         fi
@@ -47,7 +49,9 @@ if [[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx|py|go|rs)$ ]]; then
     
     # Check for missing imports
     if grep -q "Cannot find module\|Module not found" "$FILE_PATH" 2>/dev/null; then
-        echo -e "${RED}⚠️  Warning: File contains unresolved imports${NC}"
+        echo -e "${RED}❌ Error: File contains unresolved imports${NC}" >&2
+        log_hook_end "$HOOK_NAME" 2
+        exit 2  # Block operation due to missing imports
     fi
 fi
 

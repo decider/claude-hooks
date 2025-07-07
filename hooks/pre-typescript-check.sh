@@ -94,8 +94,8 @@ EOF
 )
     
     echo "$RESPONSE"
-    log_hook_end "$HOOK_NAME" 1
-    exit 1
+    log_hook_end "$HOOK_NAME" 2
+    exit 2  # Block the commit
 else
     log_info "$HOOK_NAME" "TypeScript compilation successful"
     log_decision "$HOOK_NAME" "allow" "No TypeScript errors found"
