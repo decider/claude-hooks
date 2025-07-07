@@ -1,4 +1,4 @@
-# claude-code-hooks-cli
+# Claude Code Hooks - Your Hook Manager / CLI
 
 Professional hook management system for Claude Code - TypeScript-based validation, quality checks, and hook management across environments.
 
