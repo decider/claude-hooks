@@ -52,13 +52,6 @@ const AVAILABLE_HOOKS: HookConfigs = {
     description: 'Enforces clean code standards (function length, nesting, etc.)'
   },
   
-  // Context management
-  'claude-context-updater': {
-    event: 'PostToolUse',
-    matcher: 'Write|Edit|MultiEdit',
-    description: 'Updates CLAUDE.md context file'
-  },
-  
   // Notifications
   'task-completion-notify': {
     event: 'PostToolUse',

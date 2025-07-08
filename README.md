@@ -145,7 +145,6 @@ All hooks run directly from the npm package via TypeScript commands. Your `claud
 
 ### Utility Hooks
 - **check-package-age** - Prevents installation of outdated npm/yarn packages
-- **claude-context-updater** - Updates CLAUDE.md with project information
 - **task-completion-notify** - Notifies when tasks are completed
 
 Run `claude-hooks list` to see all available hooks.
