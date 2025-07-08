@@ -12,6 +12,9 @@ import {
   HookStatDisplay 
 } from '../types.js';
 import { SETTINGS_LOCATIONS } from '../settings-locations.js';
+import { HookValidator } from '../validation/index.js';
+import { HookSelector, HookChoice } from './hook-selector.js';
+import { LocationSelector, LocationChoice } from './location-selector.js';
 
 // Available hooks from the npm package
 const AVAILABLE_HOOKS: HookConfigs = {
@@ -49,13 +52,6 @@ const AVAILABLE_HOOKS: HookConfigs = {
     description: 'Enforces clean code standards (function length, nesting, etc.)'
   },
   
-  // Context management
-  'claude-context-updater': {
-    event: 'PostToolUse',
-    matcher: 'Write|Edit|MultiEdit',
-    description: 'Updates CLAUDE.md context file'
-  },
-  
   // Notifications
   'task-completion-notify': {
     event: 'PostToolUse',
@@ -67,16 +63,34 @@ const AVAILABLE_HOOKS: HookConfigs = {
 
 // Helper function to extract hook name from command
 function extractHookName(command: string): string | null {
+  // Try to extract from npx claude-code-hooks-cli exec pattern
   const match = command.match(/exec\s+([a-z-]+)/);
-  return match ? match[1] : null;
+  if (match) return match[1];
+  
+  // For custom hooks, use a sanitized version of the command as the name
+  // Remove common prefixes and extract meaningful part
+  const customName = command
+    .replace(/^(npx|node|bash|sh|\.\/)/g, '')
+    .replace(/\.(sh|js|py|rb)$/g, '')
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50); // Limit length
+  
+  return customName || 'custom-hook';
 }
 
 // Helper function to count hooks in a settings file
 function countHooks(settingsPath: string): number {
-  if (!existsSync(settingsPath)) return 0;
+  // Convert relative paths to absolute
+  const absolutePath = settingsPath.startsWith('/') || settingsPath.startsWith(process.env.HOME || '') 
+    ? settingsPath 
+    : join(process.cwd(), settingsPath);
+    
+  if (!existsSync(absolutePath)) return 0;
   
   try {
-    const settings: HookSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
+    const settings: HookSettings = JSON.parse(readFileSync(absolutePath, 'utf-8'));
     let count = 0;
     
     if (settings.hooks) {
@@ -188,6 +202,7 @@ function getHooksFromSettings(settings: HookSettings): HookInfo[] {
           hookGroup.hooks.forEach((hook, hookIndex) => {
             const hookName = extractHookName(hook.command);
             if (hookName) {
+              const isKnownHook = hookName in AVAILABLE_HOOKS;
               hooks.push({
                 event,
                 groupIndex,
@@ -196,7 +211,9 @@ function getHooksFromSettings(settings: HookSettings): HookInfo[] {
                 matcher: hookGroup.matcher,
                 pattern: hookGroup.pattern,
                 command: hook.command,
-                description: AVAILABLE_HOOKS[hookName]?.description || 'No description',
+                description: isKnownHook 
+                  ? AVAILABLE_HOOKS[hookName].description 
+                  : `Custom hook: ${hook.command.slice(0, 60)}${hook.command.length > 60 ? '...' : ''}`,
                 stats: getHookStats(hookName)
               });
             }
@@ -207,6 +224,30 @@ function getHooksFromSettings(settings: HookSettings): HookInfo[] {
   });
   
   return hooks;
+}
+
+// Helper function to get all unique hooks from settings (including custom ones)
+function getAllUniqueHooks(settings: HookSettings): Set<string> {
+  const uniqueHooks = new Set<string>();
+  
+  if (!settings.hooks) return uniqueHooks;
+  
+  Object.values(settings.hooks).forEach(eventHooks => {
+    if (Array.isArray(eventHooks)) {
+      eventHooks.forEach(hookGroup => {
+        if (hookGroup.hooks && Array.isArray(hookGroup.hooks)) {
+          hookGroup.hooks.forEach(hook => {
+            const hookName = extractHookName(hook.command);
+            if (hookName) {
+              uniqueHooks.add(hookName);
+            }
+          });
+        }
+      });
+    }
+  });
+  
+  return uniqueHooks;
 }
 
 // Helper function to remove a hook from settings
@@ -227,40 +268,71 @@ function removeHook(settings: HookSettings, hookToRemove: HookInfo): void {
 }
 
 // Helper function to add a hook to settings
-function addHook(settings: HookSettings, hookName: string): void {
+function addHook(settings: HookSettings, hookName: string, customHookInfo?: HookInfo): void {
   const hookConfig = AVAILABLE_HOOKS[hookName];
-  if (!hookConfig) return;
+  
+  // If it's not a known hook and no custom info provided, skip
+  if (!hookConfig && !customHookInfo) return;
+  
+  // Determine event, matcher, pattern, and command
+  const event = hookConfig?.event || customHookInfo?.event || 'PreToolUse';
+  const matcher = hookConfig?.matcher || customHookInfo?.matcher;
+  const pattern = hookConfig?.pattern || customHookInfo?.pattern;
+  const command = hookConfig 
+    ? `npx claude-code-hooks-cli exec ${hookName}`
+    : customHookInfo?.command || '';
   
   // Ensure hooks structure exists
   if (!settings.hooks) settings.hooks = {};
-  if (!settings.hooks[hookConfig.event]) settings.hooks[hookConfig.event] = [];
+  if (!settings.hooks[event]) settings.hooks[event] = [];
   
-  const eventHooks = settings.hooks[hookConfig.event];
+  const eventHooks = settings.hooks[event];
   
   // Find existing group with same matcher and pattern, or create new one
   let targetGroup = eventHooks.find(group => 
-    group.matcher === hookConfig.matcher &&
-    group.pattern === hookConfig.pattern
+    group.matcher === matcher &&
+    group.pattern === pattern
   );
   
   if (!targetGroup) {
     targetGroup = {
       hooks: []
     };
-    if (hookConfig.matcher) targetGroup.matcher = hookConfig.matcher;
-    if (hookConfig.pattern) targetGroup.pattern = hookConfig.pattern;
+    if (matcher) targetGroup.matcher = matcher;
+    if (pattern) targetGroup.pattern = pattern;
     eventHooks.push(targetGroup);
   }
   
   // Add the hook
   targetGroup.hooks.push({
     type: 'command',
-    command: `npx claude-code-hooks-cli exec ${hookName}`
+    command
   });
 }
 
 // Helper function to save settings
-function saveSettings(path: string, settings: HookSettings): void {
+function saveSettings(path: string, settings: HookSettings, silent: boolean = false): void {
+  // Validate settings before saving
+  const validator = new HookValidator();
+  const result = validator.validateSettings(settings);
+  
+  if (!result.valid) {
+    if (!silent) {
+      console.error(chalk.red('\n❌ Invalid settings configuration:'));
+      console.error(validator.formatResults(result, true));
+      console.error(chalk.yellow('\nSettings were not saved due to validation errors.'));
+    }
+    throw new Error('Invalid settings configuration');
+  }
+  
+  // Show warnings if any
+  if (!silent && result.warnings.length > 0) {
+    console.warn(chalk.yellow('\n⚠️  Validation warnings:'));
+    result.warnings.forEach(warning => {
+      console.warn(chalk.yellow(`  - ${warning.message}`));
+    });
+  }
+  
   // Create directory if needed
   const dir = join(path, '..');
   if (!existsSync(dir)) {
@@ -272,6 +344,12 @@ function saveSettings(path: string, settings: HookSettings): void {
 }
 
 export async function manage(): Promise<void> {
+  // Ensure Ctrl+C always works
+  process.on('SIGINT', () => {
+    console.log(chalk.yellow('\n\nExiting...'));
+    process.exit(0);
+  });
+
   let selectedPath: string | null = null;
   
   while (true) {
@@ -279,54 +357,70 @@ export async function manage(): Promise<void> {
     console.log(chalk.cyan('Claude Hooks Manager\n'));
     
     if (!selectedPath) {
-      // Display hook statistics before location selection
+      // Get hook statistics
       const allStats = getAllHookStats();
-      if (allStats.length > 0) {
-        console.log(chalk.yellow('Hook Statistics:'));
-        console.log(chalk.gray('─'.repeat(50)));
-        console.log(chalk.gray('Hook Name'.padEnd(30) + 'Calls'.padEnd(10) + 'Last Called'));
-        console.log(chalk.gray('─'.repeat(50)));
-        
-        allStats.forEach(stat => {
-          const name = stat.name.padEnd(30);
-          const calls = stat.count.toString().padEnd(10);
-          const lastCall = stat.relativeTime;
-          console.log(`${name}${calls}${lastCall}`);
-        });
-        console.log(chalk.gray('─'.repeat(50)));
-        console.log();
-      }
       
-      // Show locations with hook counts
-      const locations = SETTINGS_LOCATIONS.map(loc => {
-        const count = countHooks(loc.path);
-        return {
-          name: `${chalk.cyan(loc.display)} ${chalk.gray(`(${count} hooks)`)} - ${chalk.gray(loc.description)}`,
-          value: loc.path,
-          short: loc.display
-        };
+      // Build location choices
+      const locationChoices: LocationChoice[] = SETTINGS_LOCATIONS.map(loc => ({
+        path: loc.path,
+        display: loc.display,
+        description: loc.description,
+        hookCount: countHooks(loc.path),
+        value: loc.path
+      }));
+      
+      // Add separator
+      locationChoices.push({
+        path: '',
+        display: '',
+        description: '',
+        hookCount: 0,
+        value: 'separator'
       });
       
       // Add log viewing options
-      const choices: any[] = [...locations];
-      choices.push(new inquirer.Separator());
-      choices.push({
-        name: chalk.gray('📋 View recent logs'),
+      locationChoices.push({
+        path: '',
+        display: chalk.gray('📋 View recent logs'),
+        description: '',
+        hookCount: 0,
         value: 'view-logs'
       });
-      choices.push({
-        name: chalk.gray('📊 Tail logs (live)'),
+      
+      locationChoices.push({
+        path: '',
+        display: chalk.gray('📊 Tail logs (live)'),
+        description: '',
+        hookCount: 0,
         value: 'tail-logs'
       });
       
-      const { path } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'path',
-          message: 'Select a settings file to manage:',
-          choices
-        }
-      ]);
+      // Add separator
+      locationChoices.push({
+        path: '',
+        display: '',
+        description: '',
+        hookCount: 0,
+        value: 'separator'
+      });
+      
+      // Add exit option
+      locationChoices.push({
+        path: '',
+        display: '✕ Exit',
+        description: '',
+        hookCount: 0,
+        value: 'exit'
+      });
+      
+      // Run the location selector
+      const selector = new LocationSelector(locationChoices, allStats.length > 0, allStats);
+      const path = await selector.run();
+      
+      if (path === 'exit') {
+        console.log(chalk.yellow('Goodbye!'));
+        process.exit(0);
+      }
       
       if (path === 'view-logs') {
         console.clear();
@@ -338,7 +432,12 @@ export async function manage(): Promise<void> {
           console.log(chalk.gray('No log file found.'));
         }
         console.log(chalk.gray('\nPress Enter to continue...'));
-        await inquirer.prompt([{ type: 'input', name: 'continue', message: '' }]);
+        try {
+          await inquirer.prompt([{ type: 'input', name: 'continue', message: '' }]);
+        } catch (err) {
+          // User pressed Ctrl+C
+          process.exit(0);
+        }
         continue;
       }
       
@@ -355,7 +454,12 @@ export async function manage(): Promise<void> {
         } else {
           console.log(chalk.gray('No log file found.'));
           console.log(chalk.gray('\nPress Enter to continue...'));
-          await inquirer.prompt([{ type: 'input', name: 'continue', message: '' }]);
+          try {
+            await inquirer.prompt([{ type: 'input', name: 'continue', message: '' }]);
+          } catch (err) {
+            // User pressed Ctrl+C
+            process.exit(0);
+          }
         }
         continue;
       }
@@ -369,9 +473,38 @@ export async function manage(): Promise<void> {
       "hooks": {}
     };
     
-    if (selectedPath && existsSync(selectedPath)) {
+    // Convert relative paths to absolute
+    const absoluteSelectedPath = selectedPath && (selectedPath.startsWith('/') || selectedPath.startsWith(process.env.HOME || '') 
+      ? selectedPath 
+      : join(process.cwd(), selectedPath));
+    
+    if (absoluteSelectedPath && existsSync(absoluteSelectedPath)) {
       try {
-        settings = JSON.parse(readFileSync(selectedPath, 'utf-8'));
+        settings = JSON.parse(readFileSync(absoluteSelectedPath, 'utf-8'));
+        
+        // Validate loaded settings
+        const validator = new HookValidator();
+        const result = validator.validateSettings(settings);
+        
+        if (!result.valid) {
+          console.error(chalk.red(`\n❌ Invalid settings in ${selectedPath}:`));
+          console.error(validator.formatResults(result, true));
+          console.error(chalk.yellow('\nPlease fix these issues before managing hooks.'));
+          console.error(chalk.gray('\nPress Enter to continue...'));
+          await inquirer.prompt([{ type: 'input', name: 'continue', message: '' }]);
+          selectedPath = null;
+          continue;
+        }
+        
+        // Show warnings if any
+        if (result.warnings.length > 0) {
+          console.warn(chalk.yellow('\n⚠️  Validation warnings:'));
+          result.warnings.forEach(warning => {
+            console.warn(chalk.yellow(`  - ${warning.message}`));
+          });
+          console.warn(chalk.gray('\nPress Enter to continue...'));
+          await inquirer.prompt([{ type: 'input', name: 'continue', message: '' }]);
+        }
       } catch (err: any) {
         console.error(chalk.red(`Error reading ${selectedPath}: ${err.message}`));
         return;
@@ -381,107 +514,83 @@ export async function manage(): Promise<void> {
     // Management loop for this file
     let managingFile = true;
     while (managingFile) {
-      console.clear();
-      console.log(chalk.cyan(`Managing: ${selectedPath}\n`));
-      
       // Get current hooks
       const currentHooks = getHooksFromSettings(settings);
       const currentHookNames = new Set(currentHooks.map(h => h.name));
       
-      // Get available hooks (not already added)
-      const availableHooks = Object.entries(AVAILABLE_HOOKS)
-        .filter(([name]) => !currentHookNames.has(name))
-        .map(([name, config]) => ({ name, ...config }));
+      // Build hook choices for the selector
+      const hookChoices: HookChoice[] = [];
       
-      // Build choices
-      const choices: any[] = [];
-      
-      if (currentHooks.length > 0) {
-        choices.push(new inquirer.Separator(
-          chalk.yellow(`=== Current Hooks (${currentHooks.length}) ${chalk.gray('- press Enter to remove')} ===`)
-        ));
-        
-        // Add "Remove all" option if there are multiple hooks
-        if (currentHooks.length > 1) {
-          choices.push({
-            name: `${chalk.red('✗')} ${chalk.bold('Remove all hooks')} ${chalk.gray(`(${currentHooks.length} hooks)`)}`,
-            value: { action: 'removeAll' }
-          });
-        }
-        
-        currentHooks.forEach((hook) => {
-          const execInfo = hook.stats.count > 0 ? ` ${chalk.cyan(`[${hook.stats.count}x]`)}` : '';
-          choices.push({
-            name: `${chalk.red('✗')} ${hook.name} - ${hook.description} ${chalk.gray(`(${hook.event})`)}${execInfo}`,
-            value: { action: 'remove', hook }
-          });
+      // Add known hooks
+      Object.entries(AVAILABLE_HOOKS).forEach(([name, config]) => {
+        hookChoices.push({
+          name,
+          description: config.description,
+          event: config.event,
+          selected: currentHookNames.has(name)
         });
-      }
+      });
       
-      if (availableHooks.length > 0) {
-        choices.push(new inquirer.Separator(
-          chalk.green(`\n=== Available Hooks (${availableHooks.length}) ${chalk.gray('- press Enter to add')} ===`)
-        ));
-        
-        // Add "Add all" option if there are multiple available hooks
-        if (availableHooks.length > 1) {
-          choices.push({
-            name: `${chalk.green('⊕')} ${chalk.bold('Add all available hooks')} ${chalk.gray(`(${availableHooks.length} hooks)`)}`,
-            value: { action: 'addAll' }
-          });
+      // Add custom hooks that are in settings but not in AVAILABLE_HOOKS
+      currentHooks.forEach(hook => {
+        if (!(hook.name in AVAILABLE_HOOKS)) {
+          // Don't add duplicates
+          if (!hookChoices.find(choice => choice.name === hook.name)) {
+            hookChoices.push({
+              name: hook.name,
+              description: hook.description,
+              event: hook.event,
+              selected: true // Custom hooks in settings are always selected
+            });
+          }
         }
+      });
+      
+      // Sort hooks: selected first, then known hooks, then custom hooks, then by name
+      hookChoices.sort((a, b) => {
+        if (a.selected !== b.selected) return b.selected ? 1 : -1;
+        const aIsKnown = a.name in AVAILABLE_HOOKS;
+        const bIsKnown = b.name in AVAILABLE_HOOKS;
+        if (aIsKnown !== bIsKnown) return aIsKnown ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      // Create the save handler
+      const saveHandler = async (selectedHookNames: string[]) => {
+        // Keep track of which custom hooks we need to preserve
+        const customHooksToPreserve = currentHooks.filter(hook => 
+          !(hook.name in AVAILABLE_HOOKS) && selectedHookNames.includes(hook.name)
+        );
         
-        availableHooks.forEach(hook => {
-          choices.push({
-            name: `${chalk.green('+')} ${hook.name} - ${hook.description} ${chalk.gray(`(${hook.event})`)}`,
-            value: { action: 'add', hookName: hook.name }
-          });
+        // Clear hooks and rebuild based on selection
+        settings.hooks = {};
+        selectedHookNames.forEach(hookName => {
+          // Check if it's a custom hook we need to preserve
+          const customHook = customHooksToPreserve.find(h => h.name === hookName);
+          if (customHook) {
+            addHook(settings, hookName, customHook);
+          } else {
+            addHook(settings, hookName);
+          }
         });
-      }
-      
-      choices.push(new inquirer.Separator());
-      choices.push({ name: chalk.gray('← Back to location selection'), value: { action: 'back' } });
-    
-      const { selection } = await inquirer.prompt([
-        {
-          type: 'list',
-          name: 'selection',
-          message: 'Select an action:',
-          choices,
-          pageSize: 20
+        
+        if (absoluteSelectedPath) {
+          try {
+            saveSettings(absoluteSelectedPath, settings, true); // silent mode for auto-save
+          } catch (err) {
+            // Handle validation errors silently during auto-save
+          }
         }
-      ]);
-    
-      switch (selection.action) {
-        case 'remove':
-          removeHook(settings, selection.hook);
-          // Auto-save after each change
-          if (selectedPath) saveSettings(selectedPath, settings);
-          break;
-          
-        case 'removeAll':
-          // Remove all hooks
-          settings.hooks = {};
-          if (selectedPath) saveSettings(selectedPath, settings);
-          break;
-          
-        case 'add':
-          addHook(settings, selection.hookName);
-          // Auto-save after each change
-          if (selectedPath) saveSettings(selectedPath, settings);
-          break;
-          
-        case 'addAll':
-          availableHooks.forEach(hook => {
-            addHook(settings, hook.name);
-          });
-          if (selectedPath) saveSettings(selectedPath, settings);
-          break;
-          
-        case 'back':
-          managingFile = false;
-          selectedPath = null;
-          break;
+      };
+      
+      // Run the hook selector
+      const selector = new HookSelector(hookChoices, saveHandler);
+      const result = await selector.run();
+      
+      // If user cancelled (Ctrl+C, Q, or Esc), go back to location selection
+      if (result === null) {
+        managingFile = false;
+        selectedPath = null;
       }
     }
   }

@@ -50,10 +50,6 @@
           {
             "type": "command",
             "command": "claude/hooks/code-similarity-check.sh"
-          },
-          {
-            "type": "command",
-            "command": "claude/hooks/claude-context-updater.sh"
           }
         ]
       },

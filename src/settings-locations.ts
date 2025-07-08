@@ -6,7 +6,7 @@ export const SETTINGS_LOCATIONS: SettingsLocation[] = [
     dir: './.claude',
     file: 'settings.json',
     display: '.claude/settings.json',
-    description: 'Project settings - checked into git',
+    description: 'Project settings',
     level: 'project'
   },
   { 
@@ -14,7 +14,7 @@ export const SETTINGS_LOCATIONS: SettingsLocation[] = [
     dir: './.claude',
     file: 'settings.local.json',
     display: '.claude/settings.local.json',
-    description: 'Personal settings - git ignored',
+    description: 'Personal project settings',
     level: 'local'
   },
   { 
@@ -22,7 +22,7 @@ export const SETTINGS_LOCATIONS: SettingsLocation[] = [
     dir: `${process.env.HOME}/.claude`,
     file: 'settings.json',
     display: '~/.claude/settings.json',
-    description: 'Global - all projects',
+    description: 'Personal global settings',
     level: 'global'
   }
 ];

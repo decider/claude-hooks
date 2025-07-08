@@ -10,7 +10,8 @@ Professional hook management system for Claude Code - TypeScript-based validatio
 🎯 **Essential Built-in Hooks** - Pre-built validation and quality hooks ready to use  
 🔧 **Hook Management Tool** - Easy add/remove hooks across different Claude environments  
 📁 **Multi-Environment Support** - Manage hooks for local, global, project, and team settings  
-🛡️ **Hook Validation** - Ensures all hooks are properly structured and secure  
+🛡️ **Settings Validation** - Automatic validation when loading/saving hook configurations  
+✅ **CLI Validation Command** - `claude-hooks validate` to check settings files  
 ⚡ **TypeScript-Powered** - Full type safety with modern JavaScript features  
 🎮 **Interactive CLI** - `claude-hooks` command for all hook management needs
 
@@ -144,7 +145,6 @@ All hooks run directly from the npm package via TypeScript commands. Your `claud
 
 ### Utility Hooks
 - **check-package-age** - Prevents installation of outdated npm/yarn packages
-- **claude-context-updater** - Updates CLAUDE.md with project information
 - **task-completion-notify** - Notifies when tasks are completed
 
 Run `claude-hooks list` to see all available hooks.
@@ -183,7 +183,28 @@ Display hook performance statistics and success rates.
 View hook execution logs. Use `--follow` for live monitoring.
 
 ### `claude-hooks validate [path]`
-Validate hook files to ensure they're properly structured and secure.
+**Validate hook settings files** - Ensures configurations are properly structured.
+
+Validates JSON syntax, hook structure, event names, tool matchers, and regex patterns.
+
+```bash
+# Validate all settings files
+claude-hooks validate
+
+# Validate specific file
+claude-hooks validate claude/settings.json
+
+# Show detailed validation information
+claude-hooks validate -v
+```
+
+The validator checks:
+- ✅ Valid JSON syntax and structure
+- ✅ Correct event names (PreToolUse, PostToolUse, Stop)
+- ✅ Valid tool matchers (Bash, Write, Edit, etc.)
+- ✅ Proper regex pattern syntax
+- ✅ Required fields and types
+- ✅ Logging configuration (if present)
 
 ### `claude-hooks exec <hook>`
 Execute a specific hook. This is used internally by Claude Code.
@@ -204,6 +225,8 @@ Execute a specific hook. This is used internally by Claude Code.
 - 📁 **Common validation library** - Shared functionality for consistency
 - 🚀 **Enhanced CLI commands** - Better hook management experience
 - 🧹 **Removed deprecated hooks** - Cleaner, more focused hook set
+- ✅ **Hook Settings Validation** - Automatic validation prevents invalid configurations
+- 📋 **Validate Command** - New `claude-hooks validate` command for checking settings
 
 ## Benefits
 
