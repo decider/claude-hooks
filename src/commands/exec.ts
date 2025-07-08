@@ -54,26 +54,39 @@ function formatClaudeError(hookName: string, code: number | null, stderr: string
 }
 
 export async function exec(hookName: string, options?: any): Promise<void> {
-  // Resolve hook path - try multiple locations
-  const possiblePaths = [
-    join(__dirname, '../../hooks', `${hookName}.sh`),
-    join(process.cwd(), 'hooks', `${hookName}.sh`),
-    join(process.cwd(), 'claude', 'hooks', `${hookName}.sh`),
-    join(process.cwd(), '.claude', 'hooks', `${hookName}.sh`)
-  ];
-  
+  // Check if hookName is actually a direct command/path
   let hookPath: string | null = null;
-  for (const path of possiblePaths) {
-    if (existsSync(path)) {
-      hookPath = path;
-      break;
-    }
-  }
   
-  if (!hookPath) {
-    console.error(`Error: Hook '${hookName}' not found in any of these locations:`);
-    possiblePaths.forEach(path => console.error(`  - ${path}`));
-    process.exit(1);
+  // If hookName looks like a path or command, use it directly
+  if (hookName.includes('/') || hookName.includes('.')) {
+    // Resolve relative paths from current working directory
+    hookPath = hookName.startsWith('/') ? hookName : join(process.cwd(), hookName);
+    
+    // Check if the file exists
+    if (!existsSync(hookPath)) {
+      console.error(`Error: Hook command '${hookName}' not found at ${hookPath}`);
+      process.exit(1);
+    }
+  } else {
+    // Standard hook name - try multiple locations
+    const possiblePaths = [
+      join(__dirname, '../../hooks', `${hookName}.sh`),
+      join(process.cwd(), 'hooks', `${hookName}.sh`),
+      join(process.cwd(), '.claude', 'hooks', `${hookName}.sh`)
+    ];
+    
+    for (const path of possiblePaths) {
+      if (existsSync(path)) {
+        hookPath = path;
+        break;
+      }
+    }
+    
+    if (!hookPath) {
+      console.error(`Error: Hook '${hookName}' not found in any of these locations:`);
+      possiblePaths.forEach(path => console.error(`  - ${path}`));
+      process.exit(1);
+    }
   }
 
   const startTime = Date.now();

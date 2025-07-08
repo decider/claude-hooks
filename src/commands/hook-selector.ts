@@ -6,6 +6,7 @@ export interface HookChoice {
   description: string;
   event: string;
   selected: boolean;
+  source?: 'built-in' | 'project' | 'custom';
 }
 
 export class HookSelector {
@@ -43,19 +44,32 @@ export class HookSelector {
       const cursor = isCurrentLine ? chalk.cyan('❯') : ' ';
       const name = choice.name.padEnd(30);
       const event = `(${choice.event})`;
-      const isCustom = !choice.description.startsWith('TypeScript') && 
-                       !choice.description.startsWith('Code linting') &&
-                       !choice.description.startsWith('Run test') &&
-                       !choice.description.startsWith('Prevents') &&
-                       !choice.description.startsWith('Enforces') &&
-                       !choice.description.startsWith('System');
+      
+      // Determine source label
+      let sourceLabel = '';
+      if (choice.source === 'project') {
+        sourceLabel = chalk.blue('[project]');
+      } else if (choice.source === 'custom') {
+        sourceLabel = chalk.dim('[custom]');
+      } else if (choice.source !== 'built-in') {
+        // Legacy custom hook detection for backwards compatibility
+        const isCustom = !choice.description.startsWith('TypeScript') && 
+                         !choice.description.startsWith('Code linting') &&
+                         !choice.description.startsWith('Run test') &&
+                         !choice.description.startsWith('Prevents') &&
+                         !choice.description.startsWith('Enforces') &&
+                         !choice.description.startsWith('System');
+        if (isCustom) {
+          sourceLabel = chalk.dim('[custom]');
+        }
+      }
       
       // Highlight current line with bold and cyan color
       if (isCurrentLine) {
-        const nameStr = isCustom ? `${chalk.bold.cyan(name)} ${chalk.dim.cyan('[custom]')}` : chalk.bold.cyan(name);
+        const nameStr = sourceLabel ? `${chalk.bold.cyan(name)} ${sourceLabel}` : chalk.bold.cyan(name);
         console.log(`${cursor}${checkbox} ${nameStr} ${chalk.bold.cyan(event)}`);
       } else {
-        const nameStr = isCustom ? `${name} ${chalk.dim('[custom]')}` : name;
+        const nameStr = sourceLabel ? `${name} ${sourceLabel}` : name;
         console.log(`${cursor}${checkbox} ${nameStr} ${chalk.gray(event)}`);
       }
     });

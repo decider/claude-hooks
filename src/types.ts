@@ -55,3 +55,19 @@ export interface HookStatDisplay {
   lastCall: string | null;
   relativeTime: string;
 }
+
+export interface HookTemplate extends HookConfig {
+  command?: string;
+}
+
+export interface HookTemplates {
+  [key: string]: HookTemplate;
+}
+
+export type HookSource = 'built-in' | 'project' | 'custom';
+
+export interface DiscoveredHook extends HookConfig {
+  name: string;
+  source: HookSource;
+  command?: string;
+}
