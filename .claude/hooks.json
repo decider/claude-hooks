@@ -1,0 +1,16 @@
+{
+  "example-project-hook": {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "pattern": "^echo\\s+test",
+    "description": "Example project-specific hook for demonstration",
+    "command": "echo 'This is an example project hook!'"
+  },
+  "custom-commit-check": {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "pattern": "^git\\s+commit",
+    "description": "Custom commit validation for this project",
+    "command": "./scripts/validate-commit.sh"
+  }
+}

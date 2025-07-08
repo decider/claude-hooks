@@ -147,6 +147,30 @@ All hooks run directly from the npm package via TypeScript commands. Your `claud
 - **check-package-age** - Prevents installation of outdated npm/yarn packages
 - **task-completion-notify** - Notifies when tasks are completed
 
+### Project-Specific Hooks
+The hook manager can now automatically discover hooks defined in your project! Create a `.claude/hooks.json` file to share hook templates with your team:
+
+```json
+{
+  "project-lint": {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "pattern": "^git\\s+commit",
+    "description": "Run project-specific linting rules",
+    "command": "./scripts/lint.sh"
+  },
+  "security-scan": {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "pattern": "^npm\\s+(install|i)",
+    "description": "Scan dependencies for vulnerabilities",
+    "command": "./scripts/security-check.sh"
+  }
+}
+```
+
+These hooks will automatically appear in the hook manager with a `[project]` label!
+
 Run `claude-hooks list` to see all available hooks.
 
 ## Commands
@@ -218,8 +242,16 @@ Execute a specific hook. This is used internally by Claude Code.
 - **Local** (`claude/settings.local.json`) - Personal settings, git ignored
 - **Global** (`~/.claude/settings.json`) - Applies to all your projects
 
-## What's New in v2.3.0
+## What's New
 
+### v2.4.0 (Latest)
+- 🔍 **Hook Discovery System** - Automatically finds project hooks in `.claude/hooks.json`
+- 🏷️ **Hook Source Labels** - Visual indicators for built-in, project, and custom hooks
+- 📂 **Project Hook Templates** - Share team-specific hooks via version control
+- 🛡️ **Template Validation** - Automatic validation of discovered hook templates
+- 🎯 **Relative Path Support** - Project hooks can use relative script paths
+
+### v2.3.0
 - 🎯 **Simplified hook system** - Consolidated to essential validation hooks
 - 🛡️ **Improved error handling** - Better exit codes and error messages
 - 📁 **Common validation library** - Shared functionality for consistency

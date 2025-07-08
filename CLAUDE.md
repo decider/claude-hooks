@@ -5,19 +5,43 @@ A command-line tool for managing Claude Code hooks - validation and quality chec
 ## Overview
 This project provides a CLI tool to easily manage hooks for Claude Code (claude.ai/code). Hooks allow you to run validation, linting, type checking, and other quality checks automatically before certain actions in Claude.
 
+## Hook Discovery System
+The CLI can automatically discover project-specific hooks! Create a `.claude/hooks.json` file in your project:
+
+```json
+{
+  "project-lint": {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "pattern": "^git\\s+commit",
+    "description": "Run project-specific linting",
+    "command": "./scripts/lint.sh"
+  }
+}
+```
+
+These hooks will appear in the manager with a `[project]` label.
+
 ## Available Hooks
 
-### Code Quality
+### Built-in Hooks
+#### Code Quality
 - **typescript-check**: TypeScript type checking before git commits
 - **lint-check**: Code linting (ESLint, etc.) before git commits  
 - **test-check**: Run test suite before various operations
 - **code-quality-validator**: Enforces clean code standards (function length, nesting, etc.) after file edits
 
-### Package Management
+#### Package Management
 - **check-package-age**: Prevents installation of outdated npm/yarn packages
 
-### Notifications
+#### Notifications
 - **task-completion-notify**: System notifications for completed tasks
+
+### Project Hooks
+Discovered from `.claude/hooks.json` - shown with `[project]` label
+
+### Custom Hooks
+User-added hooks - shown with `[custom]` label
 
 ## Commands
 - `npm run build` - Compile TypeScript to JavaScript

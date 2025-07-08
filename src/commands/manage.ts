@@ -9,12 +9,15 @@ import {
   SettingsLocation, 
   HookInfo, 
   HookStats, 
-  HookStatDisplay 
+  HookStatDisplay,
+  DiscoveredHook,
+  HookSource
 } from '../types.js';
 import { SETTINGS_LOCATIONS } from '../settings-locations.js';
 import { HookValidator } from '../validation/index.js';
 import { HookSelector, HookChoice } from './hook-selector.js';
 import { LocationSelector, LocationChoice } from './location-selector.js';
+import { discoverHookTemplates, mergeHooksWithDiscovered } from '../discovery/hook-discovery.js';
 
 // Available hooks from the npm package
 const AVAILABLE_HOOKS: HookConfigs = {
@@ -268,19 +271,31 @@ function removeHook(settings: HookSettings, hookToRemove: HookInfo): void {
 }
 
 // Helper function to add a hook to settings
-function addHook(settings: HookSettings, hookName: string, customHookInfo?: HookInfo): void {
+function addHook(settings: HookSettings, hookName: string, customHookInfo?: HookInfo, discoveredHook?: DiscoveredHook): void {
   const hookConfig = AVAILABLE_HOOKS[hookName];
   
-  // If it's not a known hook and no custom info provided, skip
-  if (!hookConfig && !customHookInfo) return;
+  // If it's not a known hook and no custom/discovered info provided, skip
+  if (!hookConfig && !customHookInfo && !discoveredHook) return;
   
   // Determine event, matcher, pattern, and command
-  const event = hookConfig?.event || customHookInfo?.event || 'PreToolUse';
-  const matcher = hookConfig?.matcher || customHookInfo?.matcher;
-  const pattern = hookConfig?.pattern || customHookInfo?.pattern;
-  const command = hookConfig 
-    ? `npx claude-code-hooks-cli exec ${hookName}`
-    : customHookInfo?.command || '';
+  const event = hookConfig?.event || discoveredHook?.event || customHookInfo?.event || 'PreToolUse';
+  const matcher = hookConfig?.matcher || discoveredHook?.matcher || customHookInfo?.matcher;
+  const pattern = hookConfig?.pattern || discoveredHook?.pattern || customHookInfo?.pattern;
+  
+  let command: string;
+  if (hookConfig) {
+    // Built-in hook
+    command = `npx claude-code-hooks-cli exec ${hookName}`;
+  } else if (discoveredHook?.command) {
+    // Project hook with custom command
+    command = discoveredHook.command;
+  } else if (customHookInfo?.command) {
+    // Custom hook
+    command = customHookInfo.command;
+  } else {
+    // Default to exec pattern
+    command = `npx claude-code-hooks-cli exec ${hookName}`;
+  }
   
   // Ensure hooks structure exists
   if (!settings.hooks) settings.hooks = {};
@@ -514,6 +529,10 @@ export async function manage(): Promise<void> {
     // Management loop for this file
     let managingFile = true;
     while (managingFile) {
+      // Discover project hook templates
+      const discoveredHooks = discoverHookTemplates();
+      const allAvailableHooks = mergeHooksWithDiscovered(AVAILABLE_HOOKS, discoveredHooks);
+      
       // Get current hooks
       const currentHooks = getHooksFromSettings(settings);
       const currentHookNames = new Set(currentHooks.map(h => h.name));
@@ -521,54 +540,68 @@ export async function manage(): Promise<void> {
       // Build hook choices for the selector
       const hookChoices: HookChoice[] = [];
       
-      // Add known hooks
-      Object.entries(AVAILABLE_HOOKS).forEach(([name, config]) => {
+      // Add all available hooks (built-in and discovered)
+      allAvailableHooks.forEach(hook => {
         hookChoices.push({
-          name,
-          description: config.description,
-          event: config.event,
-          selected: currentHookNames.has(name)
+          name: hook.name,
+          description: hook.description,
+          event: hook.event,
+          selected: currentHookNames.has(hook.name),
+          source: hook.source
         });
       });
       
-      // Add custom hooks that are in settings but not in AVAILABLE_HOOKS
+      // Add custom hooks that are in settings but not in available hooks
       currentHooks.forEach(hook => {
-        if (!(hook.name in AVAILABLE_HOOKS)) {
+        const existingHook = allAvailableHooks.find(h => h.name === hook.name);
+        if (!existingHook) {
           // Don't add duplicates
           if (!hookChoices.find(choice => choice.name === hook.name)) {
             hookChoices.push({
               name: hook.name,
               description: hook.description,
               event: hook.event,
-              selected: true // Custom hooks in settings are always selected
+              selected: true, // Custom hooks in settings are always selected
+              source: 'custom'
             });
           }
         }
       });
       
-      // Sort hooks: selected first, then known hooks, then custom hooks, then by name
+      // Sort hooks: selected first, then by source (built-in, project, custom), then by name
       hookChoices.sort((a, b) => {
         if (a.selected !== b.selected) return b.selected ? 1 : -1;
-        const aIsKnown = a.name in AVAILABLE_HOOKS;
-        const bIsKnown = b.name in AVAILABLE_HOOKS;
-        if (aIsKnown !== bIsKnown) return aIsKnown ? -1 : 1;
+        
+        // Sort by source priority
+        const sourceOrder = { 'built-in': 0, 'project': 1, 'custom': 2 };
+        const aOrder = sourceOrder[a.source || 'custom'];
+        const bOrder = sourceOrder[b.source || 'custom'];
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        
         return a.name.localeCompare(b.name);
       });
       
       // Create the save handler
       const saveHandler = async (selectedHookNames: string[]) => {
         // Keep track of which custom hooks we need to preserve
-        const customHooksToPreserve = currentHooks.filter(hook => 
-          !(hook.name in AVAILABLE_HOOKS) && selectedHookNames.includes(hook.name)
-        );
+        const customHooksToPreserve = currentHooks.filter(hook => {
+          const foundInAvailable = allAvailableHooks.find(h => h.name === hook.name);
+          return !foundInAvailable && selectedHookNames.includes(hook.name);
+        });
         
         // Clear hooks and rebuild based on selection
         settings.hooks = {};
         selectedHookNames.forEach(hookName => {
+          // Check if it's a discovered hook
+          const discoveredHook = allAvailableHooks.find(h => h.name === hookName && h.source !== 'built-in');
+          
           // Check if it's a custom hook we need to preserve
           const customHook = customHooksToPreserve.find(h => h.name === hookName);
+          
           if (customHook) {
             addHook(settings, hookName, customHook);
+          } else if (discoveredHook) {
+            addHook(settings, hookName, undefined, discoveredHook);
           } else {
             addHook(settings, hookName);
           }
