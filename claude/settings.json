@@ -47,10 +47,6 @@
           {
             "type": "command",
             "command": "npx claude-code-hooks-cli exec code-quality-validator"
-          },
-          {
-            "type": "command",
-            "command": "npx claude-code-hooks-cli exec claude-context-updater"
           }
         ]
       },

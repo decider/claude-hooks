@@ -63,8 +63,21 @@ const AVAILABLE_HOOKS: HookConfigs = {
 
 // Helper function to extract hook name from command
 function extractHookName(command: string): string | null {
+  // Try to extract from npx claude-code-hooks-cli exec pattern
   const match = command.match(/exec\s+([a-z-]+)/);
-  return match ? match[1] : null;
+  if (match) return match[1];
+  
+  // For custom hooks, use a sanitized version of the command as the name
+  // Remove common prefixes and extract meaningful part
+  const customName = command
+    .replace(/^(npx|node|bash|sh|\.\/)/g, '')
+    .replace(/\.(sh|js|py|rb)$/g, '')
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50); // Limit length
+  
+  return customName || 'custom-hook';
 }
 
 // Helper function to count hooks in a settings file
@@ -189,6 +202,7 @@ function getHooksFromSettings(settings: HookSettings): HookInfo[] {
           hookGroup.hooks.forEach((hook, hookIndex) => {
             const hookName = extractHookName(hook.command);
             if (hookName) {
+              const isKnownHook = hookName in AVAILABLE_HOOKS;
               hooks.push({
                 event,
                 groupIndex,
@@ -197,7 +211,9 @@ function getHooksFromSettings(settings: HookSettings): HookInfo[] {
                 matcher: hookGroup.matcher,
                 pattern: hookGroup.pattern,
                 command: hook.command,
-                description: AVAILABLE_HOOKS[hookName]?.description || 'No description',
+                description: isKnownHook 
+                  ? AVAILABLE_HOOKS[hookName].description 
+                  : `Custom hook: ${hook.command.slice(0, 60)}${hook.command.length > 60 ? '...' : ''}`,
                 stats: getHookStats(hookName)
               });
             }
@@ -208,6 +224,30 @@ function getHooksFromSettings(settings: HookSettings): HookInfo[] {
   });
   
   return hooks;
+}
+
+// Helper function to get all unique hooks from settings (including custom ones)
+function getAllUniqueHooks(settings: HookSettings): Set<string> {
+  const uniqueHooks = new Set<string>();
+  
+  if (!settings.hooks) return uniqueHooks;
+  
+  Object.values(settings.hooks).forEach(eventHooks => {
+    if (Array.isArray(eventHooks)) {
+      eventHooks.forEach(hookGroup => {
+        if (hookGroup.hooks && Array.isArray(hookGroup.hooks)) {
+          hookGroup.hooks.forEach(hook => {
+            const hookName = extractHookName(hook.command);
+            if (hookName) {
+              uniqueHooks.add(hookName);
+            }
+          });
+        }
+      });
+    }
+  });
+  
+  return uniqueHooks;
 }
 
 // Helper function to remove a hook from settings
@@ -228,35 +268,45 @@ function removeHook(settings: HookSettings, hookToRemove: HookInfo): void {
 }
 
 // Helper function to add a hook to settings
-function addHook(settings: HookSettings, hookName: string): void {
+function addHook(settings: HookSettings, hookName: string, customHookInfo?: HookInfo): void {
   const hookConfig = AVAILABLE_HOOKS[hookName];
-  if (!hookConfig) return;
+  
+  // If it's not a known hook and no custom info provided, skip
+  if (!hookConfig && !customHookInfo) return;
+  
+  // Determine event, matcher, pattern, and command
+  const event = hookConfig?.event || customHookInfo?.event || 'PreToolUse';
+  const matcher = hookConfig?.matcher || customHookInfo?.matcher;
+  const pattern = hookConfig?.pattern || customHookInfo?.pattern;
+  const command = hookConfig 
+    ? `npx claude-code-hooks-cli exec ${hookName}`
+    : customHookInfo?.command || '';
   
   // Ensure hooks structure exists
   if (!settings.hooks) settings.hooks = {};
-  if (!settings.hooks[hookConfig.event]) settings.hooks[hookConfig.event] = [];
+  if (!settings.hooks[event]) settings.hooks[event] = [];
   
-  const eventHooks = settings.hooks[hookConfig.event];
+  const eventHooks = settings.hooks[event];
   
   // Find existing group with same matcher and pattern, or create new one
   let targetGroup = eventHooks.find(group => 
-    group.matcher === hookConfig.matcher &&
-    group.pattern === hookConfig.pattern
+    group.matcher === matcher &&
+    group.pattern === pattern
   );
   
   if (!targetGroup) {
     targetGroup = {
       hooks: []
     };
-    if (hookConfig.matcher) targetGroup.matcher = hookConfig.matcher;
-    if (hookConfig.pattern) targetGroup.pattern = hookConfig.pattern;
+    if (matcher) targetGroup.matcher = matcher;
+    if (pattern) targetGroup.pattern = pattern;
     eventHooks.push(targetGroup);
   }
   
   // Add the hook
   targetGroup.hooks.push({
     type: 'command',
-    command: `npx claude-code-hooks-cli exec ${hookName}`
+    command
   });
 }
 
@@ -469,25 +519,59 @@ export async function manage(): Promise<void> {
       const currentHookNames = new Set(currentHooks.map(h => h.name));
       
       // Build hook choices for the selector
-      const hookChoices: HookChoice[] = Object.entries(AVAILABLE_HOOKS).map(([name, config]) => ({
-        name,
-        description: config.description,
-        event: config.event,
-        selected: currentHookNames.has(name)
-      }));
+      const hookChoices: HookChoice[] = [];
       
-      // Sort hooks: selected first, then by name
+      // Add known hooks
+      Object.entries(AVAILABLE_HOOKS).forEach(([name, config]) => {
+        hookChoices.push({
+          name,
+          description: config.description,
+          event: config.event,
+          selected: currentHookNames.has(name)
+        });
+      });
+      
+      // Add custom hooks that are in settings but not in AVAILABLE_HOOKS
+      currentHooks.forEach(hook => {
+        if (!(hook.name in AVAILABLE_HOOKS)) {
+          // Don't add duplicates
+          if (!hookChoices.find(choice => choice.name === hook.name)) {
+            hookChoices.push({
+              name: hook.name,
+              description: hook.description,
+              event: hook.event,
+              selected: true // Custom hooks in settings are always selected
+            });
+          }
+        }
+      });
+      
+      // Sort hooks: selected first, then known hooks, then custom hooks, then by name
       hookChoices.sort((a, b) => {
         if (a.selected !== b.selected) return b.selected ? 1 : -1;
+        const aIsKnown = a.name in AVAILABLE_HOOKS;
+        const bIsKnown = b.name in AVAILABLE_HOOKS;
+        if (aIsKnown !== bIsKnown) return aIsKnown ? -1 : 1;
         return a.name.localeCompare(b.name);
       });
       
       // Create the save handler
       const saveHandler = async (selectedHookNames: string[]) => {
+        // Keep track of which custom hooks we need to preserve
+        const customHooksToPreserve = currentHooks.filter(hook => 
+          !(hook.name in AVAILABLE_HOOKS) && selectedHookNames.includes(hook.name)
+        );
+        
         // Clear hooks and rebuild based on selection
         settings.hooks = {};
         selectedHookNames.forEach(hookName => {
-          addHook(settings, hookName);
+          // Check if it's a custom hook we need to preserve
+          const customHook = customHooksToPreserve.find(h => h.name === hookName);
+          if (customHook) {
+            addHook(settings, hookName, customHook);
+          } else {
+            addHook(settings, hookName);
+          }
         });
         
         if (absoluteSelectedPath) {

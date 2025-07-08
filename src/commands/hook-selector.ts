@@ -43,14 +43,29 @@ export class HookSelector {
       const cursor = isCurrentLine ? chalk.cyan('❯') : ' ';
       const name = choice.name.padEnd(30);
       const event = `(${choice.event})`;
+      const isCustom = !choice.description.startsWith('TypeScript') && 
+                       !choice.description.startsWith('Code linting') &&
+                       !choice.description.startsWith('Run test') &&
+                       !choice.description.startsWith('Prevents') &&
+                       !choice.description.startsWith('Enforces') &&
+                       !choice.description.startsWith('System');
       
       // Highlight current line with bold and cyan color
       if (isCurrentLine) {
-        console.log(`${cursor}${checkbox} ${chalk.bold.cyan(name)} ${chalk.bold.cyan(event)}`);
+        const nameStr = isCustom ? `${chalk.bold.cyan(name)} ${chalk.dim.cyan('[custom]')}` : chalk.bold.cyan(name);
+        console.log(`${cursor}${checkbox} ${nameStr} ${chalk.bold.cyan(event)}`);
       } else {
-        console.log(`${cursor}${checkbox} ${name} ${chalk.gray(event)}`);
+        const nameStr = isCustom ? `${name} ${chalk.dim('[custom]')}` : name;
+        console.log(`${cursor}${checkbox} ${nameStr} ${chalk.gray(event)}`);
       }
     });
+    
+    // Show descriptions for current selection
+    console.log('\n' + chalk.gray('─'.repeat(80)) + '\n');
+    const currentChoice = this.choices[this.cursorPosition];
+    if (currentChoice) {
+      console.log(chalk.white('Description: ') + chalk.gray(currentChoice.description));
+    }
   }
 
   private setupKeyHandlers() {
