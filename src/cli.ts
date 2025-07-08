@@ -5,6 +5,7 @@ import { exec } from './commands/exec.js';
 import { init } from './commands/init.js';
 import { list } from './commands/list.js';
 import { manage } from './commands/manage.js';
+import { validate } from './commands/validate.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -41,6 +42,13 @@ program
   .command('manage')
   .description('Interactively manage hooks in settings.json files')
   .action(manage);
+
+program
+  .command('validate [path]')
+  .description('Validate hook settings files')
+  .option('-v, --verbose', 'Show detailed validation information')
+  .option('--fix', 'Automatically fix issues (not yet implemented)')
+  .action(validate);
 
 // Default to manage command if no arguments provided
 if (process.argv.length === 2) {

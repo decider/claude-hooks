@@ -23,6 +23,7 @@ ENABLE_CONTEXT_UPDATER="${ENABLE_CONTEXT_UPDATER:-true}"
 AUTO_CREATE_CLAUDE_MD="${AUTO_CREATE_CLAUDE_MD:-true}"
 UPDATE_EXISTING_CLAUDE_MD="${UPDATE_EXISTING_CLAUDE_MD:-true}"
 PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
+MAX_CLAUDE_MD_SIZE="${MAX_CLAUDE_MD_SIZE:-1048576}" # 1MB in bytes
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -51,6 +52,32 @@ if [ -z "$FILE_PATH" ]; then
 fi
 
 echo -e "${BLUE}🤖 Claude Context Updater: Analyzing changes to $FILE_PATH...${NC}"
+
+# Function to check file size
+check_file_size() {
+    local file="$1"
+    local max_size="$2"
+    
+    if [ -f "$file" ]; then
+        local file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+        if [ "$file_size" -gt "$max_size" ]; then
+            return 1  # File too large
+        fi
+    fi
+    return 0  # File size OK or file doesn't exist
+}
+
+# Function to format bytes to human readable
+format_bytes() {
+    local bytes="$1"
+    if [ "$bytes" -lt 1024 ]; then
+        echo "${bytes}B"
+    elif [ "$bytes" -lt 1048576 ]; then
+        echo "$((bytes / 1024))KB"
+    else
+        echo "$((bytes / 1024 / 1024))MB"
+    fi
+}
 
 # Function to check if directory needs CLAUDE.md
 needs_claude_md() {
@@ -222,6 +249,16 @@ if [ -n "$FILE_PATH" ]; then
     
     # Update existing CLAUDE.md if it exists
     if [ "$UPDATE_EXISTING_CLAUDE_MD" = "true" ] && [ -f "$file_dir/CLAUDE.md" ]; then
+        # Check file size before updating
+        if ! check_file_size "$file_dir/CLAUDE.md" "$MAX_CLAUDE_MD_SIZE"; then
+            local current_size=$(stat -f%z "$file_dir/CLAUDE.md" 2>/dev/null || stat -c%s "$file_dir/CLAUDE.md" 2>/dev/null || echo "0")
+            echo -e "${RED}⚠️  WARNING: CLAUDE.md file is too large ($(format_bytes $current_size) > $(format_bytes $MAX_CLAUDE_MD_SIZE))${NC}" >&2
+            echo -e "${RED}   Skipping update for: $file_dir/CLAUDE.md${NC}" >&2
+            echo -e "${YELLOW}   Please check this file - it may have been corrupted or have excessive content${NC}" >&2
+            log_hook_end "$HOOK_NAME" 0  # Non-blocking error
+            exit 0  # Continue without blocking
+        fi
+        
         echo -e "${YELLOW}🔄 Updating existing CLAUDE.md in: ${file_dir#$PROJECT_ROOT/}${NC}"
         if ! update_existing_claude_md "$file_dir/CLAUDE.md"; then
             echo -e "${RED}❌ Failed to update CLAUDE.md in ${file_dir#$PROJECT_ROOT/}${NC}" >&2

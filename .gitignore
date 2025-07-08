@@ -44,3 +44,7 @@ temp/
 
 # Compiled TypeScript output
 lib/
+
+# CLAUDE.md backup files
+CLAUDE.md.backup
+*.CLAUDE.md.backup
