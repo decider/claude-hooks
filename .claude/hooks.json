@@ -12,5 +12,12 @@
     "pattern": "^git\\s+commit",
     "description": "Custom commit validation for this project",
     "command": "./scripts/validate-commit.sh"
+  },
+  "doc-compliance": {
+    "event": "PreToolUse",
+    "matcher": "Bash",
+    "pattern": "^stop$",
+    "description": "Check code changes against documentation standards when stopping",
+    "command": "./claude/hooks/doc-compliance.sh"
   }
 }
