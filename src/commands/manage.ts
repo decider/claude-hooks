@@ -57,9 +57,8 @@ const AVAILABLE_HOOKS: HookConfigs = {
   
   // Notifications
   'task-completion-notify': {
-    event: 'PostToolUse',
-    matcher: 'TodoWrite',
-    description: 'System notifications for completed tasks'
+    event: 'Stop',
+    description: 'System notifications when Claude finishes'
   }
 };
 
