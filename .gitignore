@@ -32,6 +32,9 @@ pids
 # Local configuration
 settings.local.json
 *.local.*
+.env
+.env.local
+.env.*.local
 
 # Test output
 test-results/
