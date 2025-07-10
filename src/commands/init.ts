@@ -48,9 +48,10 @@ const DEFAULT_SETTINGS: HookSettings = {
             "command": "npx claude-code-hooks-cli exec claude-context-updater"
           }
         ]
-      },
+      }
+    ],
+    "Stop": [
       {
-        "matcher": "TodoWrite",
         "hooks": [
           {
             "type": "command",
@@ -58,8 +59,7 @@ const DEFAULT_SETTINGS: HookSettings = {
           }
         ]
       }
-    ],
-    "Stop": []
+    ]
   }
 };
 
