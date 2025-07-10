@@ -48,7 +48,8 @@ if [ -z "$GEMINI_API_KEY" ]; then
     echo "  1. Environment variable: export GEMINI_API_KEY='your-key'"
     echo "  2. ~/.gemini/.env file: GEMINI_API_KEY=your-key"
     echo "  3. Project .env file: GEMINI_API_KEY=your-key"
-    exit 2
+    echo -e "${YELLOW}Skipping documentation compliance check${NC}"
+    exit 0
 fi
 
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -56,20 +57,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo "Skipping documentation compliance check"
     exit 0
 fi
-
-# Function to parse JSON value (simple implementation)
-get_json_value() {
-    local json="$1"
-    local key="$2"
-    echo "$json" | grep -o "\"$key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | sed -E 's/.*"[^"]*"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/'
-}
-
-# Function to parse JSON number
-get_json_number() {
-    local json="$1"
-    local key="$2"
-    echo "$json" | grep -o "\"$key\"[[:space:]]*:[[:space:]]*[0-9.]*" | sed -E 's/.*"[^"]*"[[:space:]]*:[[:space:]]*([0-9.]*).*/\1/'
-}
 
 # Function to get git changes
 get_changed_files() {
