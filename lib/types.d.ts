@@ -51,6 +51,8 @@ export interface HookStatDisplay {
 }
 export interface HookTemplate extends HookConfig {
     command?: string;
+    requiresApiKey?: boolean;
+    apiKeyType?: string;
 }
 export interface HookTemplates {
     [key: string]: HookTemplate;
@@ -60,5 +62,7 @@ export interface DiscoveredHook extends HookConfig {
     name: string;
     source: HookSource;
     command?: string;
+    requiresApiKey?: boolean;
+    apiKeyType?: string;
 }
 //# sourceMappingURL=types.d.ts.map
