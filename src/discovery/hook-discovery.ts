@@ -45,7 +45,8 @@ export function discoverHookTemplates(workingDir: string = process.cwd()): Disco
             pattern: template.pattern,
             description: template.description,
             command: template.command,
-            source: 'project'
+            source: 'project',
+            requiresApiKey: template.requiresApiKey
           });
         });
       } catch (err) {

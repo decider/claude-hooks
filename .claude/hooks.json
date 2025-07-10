@@ -18,6 +18,8 @@
     "matcher": "Bash",
     "pattern": "^stop$",
     "description": "Check code changes against documentation standards when stopping",
-    "command": "./claude/hooks/doc-compliance.sh"
+    "command": "./.claude/hooks/doc-compliance.sh",
+    "requiresApiKey": true,
+    "apiKeyType": "gemini"
   }
 }

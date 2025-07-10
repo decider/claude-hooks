@@ -1,5 +1,8 @@
 import readline from 'readline';
 import chalk from 'chalk';
+import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
 
 export interface HookChoice {
   name: string;
@@ -9,14 +12,49 @@ export interface HookChoice {
   source?: 'built-in' | 'project' | 'custom';
 }
 
+// Helper function to save API key
+async function saveApiKey(apiKey: string, location: 'global' | 'project'): Promise<void> {
+  const envPath = location === 'global' 
+    ? join(homedir(), '.claude', '.env')
+    : join(process.cwd(), '.env');
+    
+  const envDir = location === 'global'
+    ? join(homedir(), '.claude')
+    : process.cwd();
+    
+  // Create directory if needed
+  if (!existsSync(envDir)) {
+    mkdirSync(envDir, { recursive: true });
+  }
+  
+  // Check if .env file exists and has content
+  let envContent = '';
+  if (existsSync(envPath)) {
+    envContent = readFileSync(envPath, 'utf-8');
+    // Remove existing ANTHROPIC_API_KEY if present
+    envContent = envContent.split('\n')
+      .filter(line => !line.startsWith('ANTHROPIC_API_KEY='))
+      .join('\n');
+    if (envContent && !envContent.endsWith('\n')) {
+      envContent += '\n';
+    }
+  }
+  
+  // Add the new API key
+  envContent += `ANTHROPIC_API_KEY=${apiKey}\n`;
+  
+  // Write the file
+  writeFileSync(envPath, envContent, { mode: 0o600 }); // Secure permissions
+}
+
 export class HookSelector {
   private choices: HookChoice[];
   private cursorPosition: number = 0;
   private rl: readline.Interface;
   private resolve: ((value: string[] | null) => void) | null = null;
-  private onSave: ((selections: string[]) => Promise<void>) | null = null;
+  private onSave: ((selections: string[]) => Promise<any>) | null = null;
 
-  constructor(choices: HookChoice[], onSave?: (selections: string[]) => Promise<void>) {
+  constructor(choices: HookChoice[], onSave?: (selections: string[]) => Promise<any>) {
     this.choices = [...choices];
     this.onSave = onSave || null;
     this.rl = readline.createInterface({
@@ -107,10 +145,83 @@ export class HookSelector {
         
         if (this.onSave) {
           const selected = this.choices.filter(c => c.selected).map(c => c.name);
-          await this.onSave(selected);
+          const result = await this.onSave(selected);
           this.render();
-          console.log(chalk.gray('\nSaved'));
-          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Check if any hooks were blocked due to missing API key
+          if (result && result.blockedHooks && result.blockedHooks.length > 0) {
+            console.log(chalk.yellow('\n⚠️  API Key Required'));
+            console.log(chalk.gray(`\nThe ${result.blockedHooks.join(', ')} hook(s) require an Anthropic API key.`));
+            console.log(chalk.gray('Get your key at: ') + chalk.cyan('https://console.anthropic.com/settings/keys'));
+            console.log('');
+            console.log(chalk.white('Options:'));
+            console.log(chalk.gray('  1. Paste your API key now (starts with sk-ant-)'));
+            console.log(chalk.gray('  2. Press Esc to cancel and set it up manually'));
+            console.log(chalk.gray('     • Add to ~/.claude/.env (all projects)'));
+            console.log(chalk.gray('     • Add to .env (current project)'));
+            console.log(chalk.gray('     Format: ANTHROPIC_API_KEY=sk-ant-...'));
+            console.log('');
+            console.log(chalk.cyan('Paste API key or press Esc: '));
+            
+            // Collect API key input
+            let apiKeyBuffer = '';
+            const apiKeyResult = await new Promise<string | null>(resolve => {
+              const handler = (key: string) => {
+                if (key === '\u001b') { // Esc
+                  process.stdin.removeListener('data', handler);
+                  resolve(null);
+                } else if (key === '\r') { // Enter
+                  process.stdin.removeListener('data', handler);
+                  resolve(apiKeyBuffer.trim());
+                } else if (key === '\u007f' || key === '\b') { // Backspace
+                  if (apiKeyBuffer.length > 0) {
+                    apiKeyBuffer = apiKeyBuffer.slice(0, -1);
+                    process.stdout.write('\b \b');
+                  }
+                } else if (key.charCodeAt(0) >= 32) { // Printable characters
+                  apiKeyBuffer += key;
+                  process.stdout.write('*'); // Show asterisks for security
+                }
+              };
+              process.stdin.on('data', handler);
+            });
+            
+            if (apiKeyResult && apiKeyResult.startsWith('sk-ant-')) {
+              // Save the API key
+              const saveLocation = apiKeyResult.length > 50 ? 'global' : 'global'; // Always save to global for now
+              await saveApiKey(apiKeyResult, saveLocation);
+              console.log(chalk.green(`\n✓ API key saved to ~/.claude/.env`));
+              console.log(chalk.gray('Press Enter to continue...'));
+              await new Promise(resolve => {
+                const handler = (key: string) => {
+                  if (key === '\r') {
+                    process.stdin.removeListener('data', handler);
+                    resolve(undefined);
+                  }
+                };
+                process.stdin.on('data', handler);
+              });
+            } else if (apiKeyResult) {
+              console.log(chalk.red('\n✗ Invalid API key format (must start with sk-ant-)'));
+              console.log(chalk.gray('Press Enter to continue...'));
+              await new Promise(resolve => {
+                const handler = (key: string) => {
+                  if (key === '\r') {
+                    process.stdin.removeListener('data', handler);
+                    resolve(undefined);
+                  }
+                };
+                process.stdin.on('data', handler);
+              });
+            } else {
+              console.log(chalk.yellow('\nCancelled. Set up your API key manually to use this hook.'));
+            }
+            
+            this.render();
+          } else {
+            console.log(chalk.gray('\nSaved'));
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         } else {
           this.render();
         }
