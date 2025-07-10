@@ -137,10 +137,8 @@ const AVAILABLE_HOOKS: HookConfigs = {
   
   // Documentation compliance
   'doc-compliance': {
-    event: 'PostToolUse',
-    matcher: 'Write|Edit|MultiEdit',
-    pattern: '\\.md$',
-    description: 'Enforce documentation standards for markdown files'
+    event: 'Stop',
+    description: 'Check documentation standards for all markdown files at session end'
   }
 };
 

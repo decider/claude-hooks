@@ -1,97 +1,102 @@
 #!/bin/bash
 
-# Doc Compliance Hook - Enforce documentation standards for markdown files
+# Doc Compliance Hook - Check documentation standards for all markdown files at session end
 
 source "$(dirname "$0")/common/logging.sh"
 
-# Check if required environment variables are set
-if [ -z "$CLAUDE_TOOL_RESULT_FILE" ]; then
-  log_error "doc-compliance" "Missing required CLAUDE_TOOL_RESULT_FILE environment variable"
-  exit 1
-fi
+log_info "doc-compliance" "Checking documentation compliance for markdown files"
 
-# Read the tool result
-TOOL_RESULT=$(cat "$CLAUDE_TOOL_RESULT_FILE" 2>/dev/null)
-if [ -z "$TOOL_RESULT" ]; then
-  log_warn "doc-compliance" "Empty tool result file"
+# Find all markdown files in the current directory and subdirectories
+MD_FILES=$(find . -name "*.md" -type f 2>/dev/null | grep -v node_modules | grep -v ".git" | sort)
+
+if [ -z "$MD_FILES" ]; then
+  log_info "doc-compliance" "No markdown files found to check"
   exit 0
 fi
 
-# Extract the file path from the tool result
-FILE_PATH=$(echo "$TOOL_RESULT" | jq -r '.file_path' 2>/dev/null)
-if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
-  log_warn "doc-compliance" "Could not extract file path from tool result"
-  exit 0
-fi
+# Track overall compliance
+TOTAL_FILES=0
+FAILED_FILES=0
+ALL_ERRORS=()
 
-# Only check markdown files
-if [[ ! "$FILE_PATH" =~ \.md$ ]]; then
-  exit 0
-fi
-
-log_info "doc-compliance" "Checking documentation compliance for: $FILE_PATH"
-
-# Skip if file doesn't exist
-if [ ! -f "$FILE_PATH" ]; then
-  log_warn "doc-compliance" "File not found: $FILE_PATH"
-  exit 0
-fi
-
-# Read the file content
-CONTENT=$(cat "$FILE_PATH")
-
-# Check for required sections based on file type
-ERRORS=()
-
-# Check for README files
-if [[ "$FILE_PATH" =~ README\.md$ ]]; then
-  # README should have certain sections
-  if ! echo "$CONTENT" | grep -q "^#\|^##"; then
-    ERRORS+=("README.md must have at least one heading")
+# Check each markdown file
+while IFS= read -r FILE_PATH; do
+  TOTAL_FILES=$((TOTAL_FILES + 1))
+  
+  # Skip if file doesn't exist (in case it was deleted)
+  if [ ! -f "$FILE_PATH" ]; then
+    continue
   fi
   
-  if ! echo "$CONTENT" | grep -qi "overview\|description\|about"; then
-    ERRORS+=("README.md should have an Overview or Description section")
+  # Read the file content
+  CONTENT=$(cat "$FILE_PATH")
+  FILE_ERRORS=()
+  
+  # Check for README files
+  if [[ "$FILE_PATH" =~ README\.md$ ]]; then
+    # README should have certain sections
+    if ! echo "$CONTENT" | grep -q "^#\|^##"; then
+      FILE_ERRORS+=("README.md must have at least one heading")
+    fi
+    
+    if ! echo "$CONTENT" | grep -qi "overview\|description\|about"; then
+      FILE_ERRORS+=("README.md should have an Overview or Description section")
+    fi
   fi
-fi
-
-# Check for API documentation
-if [[ "$FILE_PATH" =~ api.*\.md$ ]] || [[ "$FILE_PATH" =~ .*api\.md$ ]]; then
-  if ! echo "$CONTENT" | grep -qi "endpoint\|method\|request\|response"; then
-    ERRORS+=("API documentation should include endpoint details")
+  
+  # Check for API documentation
+  if [[ "$FILE_PATH" =~ api.*\.md$ ]] || [[ "$FILE_PATH" =~ .*api\.md$ ]]; then
+    if ! echo "$CONTENT" | grep -qi "endpoint\|method\|request\|response"; then
+      FILE_ERRORS+=("API documentation should include endpoint details")
+    fi
   fi
-fi
+  
+  # General markdown quality checks
+  # Check for empty headings
+  if echo "$CONTENT" | grep -E "^#+\s*$" > /dev/null; then
+    FILE_ERRORS+=("Empty headings found")
+  fi
+  
+  # Check for broken markdown links
+  if echo "$CONTENT" | grep -E "\[.*\]\(\s*\)" > /dev/null; then
+    FILE_ERRORS+=("Empty markdown links found")
+  fi
+  
+  # Check for TODO/FIXME items
+  TODO_COUNT=$(echo "$CONTENT" | grep -ci "todo\|fixme" || true)
+  if [ "$TODO_COUNT" -gt 0 ]; then
+    FILE_ERRORS+=("Contains $TODO_COUNT TODO/FIXME items")
+  fi
+  
+  # If there are errors for this file, track them
+  if [ ${#FILE_ERRORS[@]} -gt 0 ]; then
+    FAILED_FILES=$((FAILED_FILES + 1))
+    ALL_ERRORS+=("$FILE_PATH:")
+    for error in "${FILE_ERRORS[@]}"; do
+      ALL_ERRORS+=("  • $error")
+    done
+    ALL_ERRORS+=("")
+  fi
+done <<< "$MD_FILES"
 
-# General markdown quality checks
-# Check for empty headings
-if echo "$CONTENT" | grep -E "^#+\s*$"; then
-  ERRORS+=("Empty headings found")
-fi
+# Report results
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📝 Documentation Compliance Check Results"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Checked $TOTAL_FILES markdown files"
 
-# Check for broken markdown links
-if echo "$CONTENT" | grep -E "\[.*\]\(\s*\)"; then
-  ERRORS+=("Empty markdown links found")
-fi
-
-# Check for TODO/FIXME items
-TODO_COUNT=$(echo "$CONTENT" | grep -ci "todo\|fixme" || true)
-if [ "$TODO_COUNT" -gt 0 ]; then
-  log_warn "doc-compliance" "Found $TODO_COUNT TODO/FIXME items in documentation"
-fi
-
-# If there are errors, report them
-if [ ${#ERRORS[@]} -gt 0 ]; then
-  echo "❌ Documentation compliance check failed for $FILE_PATH:"
-  echo
-  for error in "${ERRORS[@]}"; do
-    echo "  • $error"
+if [ $FAILED_FILES -eq 0 ]; then
+  echo "✅ All markdown files pass documentation standards!"
+  log_info "doc-compliance" "All $TOTAL_FILES markdown files passed compliance check"
+else
+  echo "❌ $FAILED_FILES file(s) have documentation issues:"
+  echo ""
+  for error in "${ALL_ERRORS[@]}"; do
+    echo "$error"
   done
-  echo
-  echo "Please fix these issues to ensure documentation quality."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "💡 Consider fixing these issues to improve documentation quality"
   
-  log_error "doc-compliance" "Documentation compliance failed with ${#ERRORS[@]} errors"
-  exit 1
+  log_warn "doc-compliance" "$FAILED_FILES of $TOTAL_FILES markdown files failed compliance check"
 fi
-
-log_info "doc-compliance" "Documentation compliance check passed"
-echo "✅ Documentation compliance check passed for $FILE_PATH"
