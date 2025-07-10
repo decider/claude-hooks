@@ -9,6 +9,8 @@ import { validate } from './commands/validate.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { checkForUpdates, displayUpdateNotification } from './utils/updateChecker.js';
+import { isFirstRun, markFirstRunComplete, showWelcomeMessage } from './utils/firstRun.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -50,9 +52,32 @@ program
   .option('--fix', 'Automatically fix issues (not yet implemented)')
   .action(validate);
 
-// Default to manage command if no arguments provided
-if (process.argv.length === 2) {
-  process.argv.push('manage');
+// Main async function to handle startup tasks
+async function main() {
+  // Check if this is first run
+  const firstRun = await isFirstRun();
+  if (firstRun) {
+    await showWelcomeMessage();
+    await markFirstRunComplete();
+  }
+  
+  // Store update check promise to await later
+  const packageName = 'claude-code-hooks-cli';
+  const updateCheckPromise = checkForUpdates(packageJson.version, packageName);
+  
+  // Default to manage command if no arguments provided
+  if (process.argv.length === 2) {
+    process.argv.push('manage');
+  }
+  
+  // Parse and execute command
+  await program.parseAsync();
+  
+  // Show update notification after command completes
+  const updateResult = await updateCheckPromise;
+  if (updateResult) {
+    displayUpdateNotification(updateResult);
+  }
 }
 
-program.parse();
+main().catch(console.error);
