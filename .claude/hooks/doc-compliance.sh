@@ -251,11 +251,22 @@ if [ $file_count -eq 0 ]; then
 fi
 
 # Get default threshold
-threshold=$(get_json_number "$(cat "$CONFIG_FILE")" "thresholds.default")
-threshold=${threshold:-0.8}
+if command -v jq >/dev/null 2>&1; then
+    threshold=$(jq -r '.thresholds.default // 0.8' "$CONFIG_FILE" 2>/dev/null)
+else
+    threshold="0.8"
+fi
 
 echo -e "\nMaking compliance check (threshold: $threshold)..."
 echo -e "${GRAY}Files to check: $file_count${NC}"
+
+# Check if we have any documentation content
+if [ -z "$all_docs_content" ] || [ "$all_docs_content" = $'\n\n' ]; then
+    echo -e "\n${YELLOW}Warning: No documentation files found for the changed files${NC}"
+    echo -e "${YELLOW}Cannot perform compliance check without documentation standards${NC}"
+    echo -e "\nPlease create documentation files as specified in $CONFIG_FILE"
+    exit 0
+fi
 
 # Make single API call with all context
 prompt="Analyze the following code files for compliance with the provided documentation standards.

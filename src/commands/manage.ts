@@ -19,6 +19,7 @@ import { HookSelector, HookChoice } from './hook-selector.js';
 import { LocationSelector, LocationChoice } from './location-selector.js';
 import { discoverHookTemplates, mergeHooksWithDiscovered } from '../discovery/hook-discovery.js';
 import { homedir } from 'os';
+import { setupDocCompliance } from './doc-compliance-setup.js';
 
 // Helper function to check if API key exists
 function hasApiKey(apiKeyType?: string): boolean {
@@ -691,6 +692,11 @@ export async function manage(): Promise<void> {
             addHook(settings, hookName, undefined, discoveredHook);
           } else {
             addHook(settings, hookName);
+            
+            // Special handling for doc-compliance hook
+            if (hookName === 'doc-compliance' && newlySelectedHooks.includes(hookName)) {
+              setupDocCompliance();
+            }
           }
         });
         
