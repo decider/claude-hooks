@@ -3,6 +3,8 @@ export interface HookConfig {
     matcher?: string;
     pattern?: string;
     description: string;
+    requiresApiKey?: boolean;
+    apiKeyType?: string;
 }
 export interface HookConfigs {
     [key: string]: HookConfig;
