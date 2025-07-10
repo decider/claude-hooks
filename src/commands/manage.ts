@@ -133,6 +133,14 @@ const AVAILABLE_HOOKS: HookConfigs = {
   'task-completion-notify': {
     event: 'Stop',
     description: 'System notifications when Claude finishes'
+  },
+  
+  // Documentation compliance
+  'doc-compliance': {
+    event: 'PostToolUse',
+    matcher: 'Write|Edit|MultiEdit',
+    pattern: '\\.md$',
+    description: 'Enforce documentation standards for markdown files'
   }
 };
 
