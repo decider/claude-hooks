@@ -1,6 +1,6 @@
 {
   "name": "claude-code-hooks-cli",
-  "version": "2.5.1",
+  "version": "2.6.0",
   "description": "Claude Code hooks - Run validation and quality checks in Claude",
   "main": "lib/index.js",
   "bin": {
@@ -40,7 +40,8 @@
   "files": [
     "bin/",
     "lib/",
-    "hooks/"
+    "hooks/",
+    "scripts/postinstall.js"
   ],
   "engines": {
     "node": ">=16.0.0"
