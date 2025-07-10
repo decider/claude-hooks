@@ -23,100 +23,85 @@ npm install -D claude-code-hooks-cli
 
 ## Getting Started
 
-Welcome to Claude Hooks! Here's your journey from installation to running hooks:
-
-### Step 1: Enter Claude Hooks
+### Quick Setup (5 seconds)
 ```bash
-npm install -D claude-code-hooks-cli
+npm install -g claude-code-hooks-cli
 claude-hooks init
 ```
 
+### Interactive Setup Flow
+
+When you run `claude-hooks init`:
+
+**1. Choose setup mode:**
 ```
-┌─────────────────────────────────────────┐
-│          Welcome to Claude Hooks!      │
-│                                         │
-│  🎯 Essential validation hooks          │
-│  🔧 Multi-environment management        │
-│  🛡️ Built-in security validation       │
-│                                         │
-│         Let's get you set up...         │
-└─────────────────────────────────────────┘
+How would you like to set up hooks?
+
+❯ Quick setup (recommended defaults)
+  Custom setup (choose your hooks)
 ```
 
-### Step 2: Select Your Environment
-Choose where to manage your hooks:
-
+**2. Select where to save settings:**
 ```
-┌─────────────────────────────────────────┐
-│  Where would you like to manage hooks?  │
-│                                         │
-│  ▶ Project (.claude/settings.json)      │
-│    Local   (.claude/settings.local.json)│
-│    Global  (~/.claude/settings.json)   │
-│                                         │
-│  Current hooks: 0 configured            │
-└─────────────────────────────────────────┘
-```
+Where would you like to create the settings file?
 
-### Step 3: Choose Your Hooks
-Interactive hook selection:
-
-```
-┌─────────────────────────────────────────┐
-│     Select hooks to install/remove:     │
-│                                         │
-│  [✓] typescript-check    (Quality)     │
-│  [✓] lint-check         (Code Style)   │
-│  [✓] test-check         (Validation)   │
-│  [ ] code-quality       (Advanced)     │
-│  [ ] package-age        (Security)     │
-│                                         │
-│  Space to toggle, Enter to continue     │
-└─────────────────────────────────────────┘
-```
-
-### Step 4: Monitor Hook Performance
-View real-time statistics:
-
-```bash
-claude-hooks stats
-```
-
-```
-┌─────────────────────────────────────────┐
-│            Hook Statistics              │
-│                                         │
-│  typescript-check:  ✅ 47 runs (2m ago) │
-│  lint-check:       ✅ 52 runs (1m ago)  │
-│  test-check:       ⚠️  41 runs (5m ago)  │
-│                                         │
-└─────────────────────────────────────────┘
-```
-
-### Step 5: Live Log Monitoring
-Watch hooks in action:
-
-```bash
-claude-hooks logs --follow
-```
-
-```
-┌─────────────────────────────────────────┐
-│               Live Hook Logs            │
-│                                         │
-│ [05:48:55] [INFO] [check-package-age]   │
-│           Hook completed (exit code: 0) │
-│ [05:49:03] [INFO] [quality-check]       │
-│           Hook started                  │
-│ [05:49:11] [ERROR] [quality-check]      │
-│           Hook failed (exit code: 2)    │
-│           ⚠️ Fix quality check failures  │
-│                                         │
-│  Press Ctrl+C to stop following         │
-└─────────────────────────────────────────┘
+❯ Project (.claude/settings.json) - Team hooks, committed to git
+  Global (~/.claude/settings.json) - Your default hooks
+  Local (.claude/settings.local.json) - Personal hooks, git ignored
 ```
 
 That's it! Your hooks are now protecting your Claude Code sessions.
+
+### Advanced: Hook Manager
+
+For custom hook configuration, use the interactive manager:
+
+```bash
+claude-hooks manage
+```
+
+**Location Selection Screen:**
+```
+Claude Hooks Manager
+
+──────────────────────────────────────────────────
+Hook Name                     Calls      Last Called
+──────────────────────────────────────────────────
+typescript-check              12         2 minutes ago
+code-quality-validator        8          5 minutes ago
+check-package-age            3          1 hour ago
+──────────────────────────────────────────────────
+
+↑/↓: Navigate  Enter: Select  Q/Esc: Exit
+
+❯ Project (.claude/settings.json) (3 hooks) - Team hooks, committed to git
+  Local (.claude/settings.local.json) (0 hooks) - Personal hooks, git ignored
+  Global (~/.claude/settings.json) (0 hooks) - Your default hooks
+  ──────────────
+  📋 View recent logs
+  📊 Tail logs (live)
+  ──────────────
+  ✕ Exit
+```
+
+**Hook Selection Screen:**
+```
+Hook Manager
+
+↑/↓: Navigate  Enter: Toggle & Save  A: Select all  D: Deselect all  Q/Esc: Quit
+
+❯◉ typescript-check                        (PreToolUse)
+ ◉ code-quality-validator                  (PostToolUse)
+ ◉ check-package-age                       (PreToolUse)
+ ◯ lint-check                              (PreToolUse)
+ ◯ test-check                              (PreToolUse)
+ ◯ task-completion-notify                  (Stop)
+
+──────────────────────────────────────────────────────────────────────────────
+
+Description: TypeScript type checking before git commits
+```
+
 
 ## How It Works
 
@@ -188,7 +173,6 @@ Run `claude-hooks list` to see all available hooks.
 **Direct mode** with `--level <level>`:
 - Goes straight to quick setup at specified location
 - `project` - `.claude/settings.json` (recommended)
-- `project-alt` - `.claude/settings.json` (legacy)
 - `local` - `.claude/settings.local.json`
 - `global` - `~/.claude/settings.json`
 
@@ -234,6 +218,21 @@ The validator checks:
 Execute a specific hook. This is used internally by Claude Code.
 
 *Note: All commands are also available with the full name `claude-code-hooks-cli`*
+
+## Available Hooks
+
+### Built-in Hooks
+
+- **typescript-check** - TypeScript type checking before git commits
+- **lint-check** - Code linting (ESLint, etc.) before git commits  
+- **test-check** - Run test suite before various operations
+- **code-quality-validator** - Enforces clean code standards after file edits
+- **check-package-age** - Prevents installation of outdated npm/yarn packages
+- **task-completion-notify** - System notifications when Claude finishes (Stop event)
+
+### Project Hooks
+
+You can discover project-specific hooks by creating `.claude/hooks.json` in your project.
 
 ## Configuration Levels
 
