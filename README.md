@@ -50,8 +50,8 @@ Choose where to manage your hooks:
 ┌─────────────────────────────────────────┐
 │  Where would you like to manage hooks?  │
 │                                         │
-│  ▶ Project (claude/settings.json)      │
-│    Local   (claude/settings.local.json)│
+│  ▶ Project (.claude/settings.json)      │
+│    Local   (.claude/settings.local.json)│
 │    Global  (~/.claude/settings.json)   │
 │                                         │
 │  Current hooks: 0 configured            │
@@ -120,7 +120,7 @@ That's it! Your hooks are now protecting your Claude Code sessions.
 
 ## How It Works
 
-All hooks run directly from the npm package via TypeScript commands. Your `claude/settings.json` will contain commands like:
+All hooks run directly from the npm package via TypeScript commands. Your `.claude/settings.json` will contain commands like:
 
 ```json
 {
@@ -187,9 +187,9 @@ Run `claude-hooks list` to see all available hooks.
 
 **Direct mode** with `--level <level>`:
 - Goes straight to quick setup at specified location
-- `project` - `claude/settings.json` (recommended)
+- `project` - `.claude/settings.json` (recommended)
 - `project-alt` - `.claude/settings.json` (legacy)
-- `local` - `claude/settings.local.json`
+- `local` - `.claude/settings.local.json`
 - `global` - `~/.claude/settings.json`
 
 ### `claude-hooks manage`
@@ -237,9 +237,8 @@ Execute a specific hook. This is used internally by Claude Code.
 
 ## Configuration Levels
 
-- **Project** (`claude/settings.json`) - Shared with your team, committed to git (recommended)
-- **Legacy Project** (`.claude/settings.json`) - Old format, still supported
-- **Local** (`claude/settings.local.json`) - Personal settings, git ignored
+- **Project** (`.claude/settings.json`) - Shared with your team, committed to git (recommended)
+- **Local** (`.claude/settings.local.json`) - Personal settings, git ignored
 - **Global** (`~/.claude/settings.json`) - Applies to all your projects
 
 ## What's New

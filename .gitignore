@@ -51,3 +51,6 @@ lib/
 # CLAUDE.md backup files
 CLAUDE.md.backup
 *.CLAUDE.md.backup
+
+# Non-dotted claude directories (legacy)
+claude/
