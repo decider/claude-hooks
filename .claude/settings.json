@@ -23,16 +23,6 @@
         ],
         "matcher": "Write|Edit|MultiEdit"
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx claude-code-hooks-cli exec task-completion-notify"
-          }
-        ]
-      }
     ]
   }
 }
