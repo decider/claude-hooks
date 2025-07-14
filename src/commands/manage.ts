@@ -141,6 +141,13 @@ const AVAILABLE_HOOKS: HookConfigs = {
     description: 'AI-powered code compliance checking with Gemini Flash (~5s analysis)',
     requiresApiKey: true,
     apiKeyType: 'gemini'
+  },
+  
+  // Testing and development
+  'self-test': {
+    event: 'PreWrite',
+    pattern: '\\.test-trigger$',
+    description: 'Claude self-test hook for automated hook validation during development'
   }
 };
 

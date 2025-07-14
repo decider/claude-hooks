@@ -1,16 +1,14 @@
 {
-  "_comment": "Claude Code hooks configuration (using claude-code-hooks-cli)",
+  "_comment": "Claude Code hooks - simplified entry points (edit .claude/hooks/config.js to manage hooks)",
   "hooks": {
     "PreToolUse": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec check-package-age"
+            "command": "npx claude-code-hooks-cli pre-tool-use"
           }
-        ],
-        "matcher": "Bash",
-        "pattern": "^(npm\\s+(install|i|add)|yarn\\s+(add|install))\\s+"
+        ]
       }
     ],
     "PostToolUse": [
@@ -18,10 +16,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec code-quality-validator"
+            "command": "npx claude-code-hooks-cli post-tool-use"
           }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
+        ]
+      }
+    ],
+    "PreWrite": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli pre-write"
+          }
+        ]
       }
     ]
   }
