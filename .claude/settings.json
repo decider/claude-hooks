@@ -30,6 +30,26 @@
           }
         ]
       }
+    ],
+    "PostWrite": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli post-write"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx claude-code-hooks-cli stop"
+          }
+        ]
+      }
     ]
   }
 }

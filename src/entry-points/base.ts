@@ -21,140 +21,54 @@ export interface HookConfig {
   };
 }
 
-/**
- * Structure of JSON data sent by Claude via stdin
- * 
- * This is the abstraction layer's expected input format.
- * Claude sends this JSON structure to our entry points for every hook event.
- * 
- * @example
- * {
- *   "tool_name": "Bash",
- *   "tool_input": {
- *     "command": "npm install axios",
- *     "description": "Install axios package"
- *   },
- *   "hook_event_name": "PreToolUse"
- * }
- * 
- * @example
- * {
- *   "tool_name": "Write", 
- *   "tool_input": {
- *     "file_path": "/src/index.ts",
- *     "content": "console.log('hello');"
- *   },
- *   "hook_event_name": "PostToolUse"
- * }
- */
 export interface ClaudeInput {
-  /**
-   * The name of the tool being used
-   * Examples: "Bash", "Write", "Edit", "MultiEdit", "Read", "TodoWrite", etc.
-   */
   tool_name: string;
-  
-  /**
-   * Tool-specific input data. Structure varies by tool:
-   * - Bash: { command: string, description?: string, timeout?: number }
-   * - Write/Edit: { file_path: string, content?: string, old_string?: string, new_string?: string }
-   * - Read: { file_path: string, offset?: number, limit?: number }
-   * - Stop: {} (empty object)
-   */
   tool_input: any;
-  
-  /**
-   * The hook event that triggered this execution
-   * One of: "PreToolUse", "PostToolUse", "Stop", "PreWrite", "PostWrite"
-   */
   hook_event_name: string;
 }
 
 export class HookEntryPoint {
-  private configPath: string;
-  private config: HookConfig | null = null;
-
-  constructor(private eventType: string) {
-    // Look for config in multiple locations
-    const configPaths = [
-      path.join(process.cwd(), '.claude', 'hooks', 'config.js'),
-      path.join(process.cwd(), '.claude', 'hooks.config.js'),
-      path.join(process.cwd(), 'claude', 'hooks', 'config.js'),
-    ];
-    
-    this.configPath = configPaths.find(p => fs.existsSync(p)) || configPaths[0];
-  }
+  constructor(private eventType: string) {}
 
   async loadConfig(): Promise<HookConfig> {
+    const configPath = path.join(process.cwd(), '.claude', 'hooks', 'config.js');
+    
+    if (!fs.existsSync(configPath)) {
+      logger.debug(this.eventType, 'No config.js found');
+      return {};
+    }
+    
     try {
-      // Check if config exists
-      if (!fs.existsSync(this.configPath)) {
-        logger.debug(this.eventType, `No config found at ${this.configPath}, using empty config`);
-        return {};
-      }
-      
-      const resolvedPath = path.resolve(this.configPath);
-      
-      // Read the config file
-      const configContent = fs.readFileSync(resolvedPath, 'utf-8');
-      
-      // Create a CommonJS-like environment to evaluate the config
-      const module = { exports: {} };
-      const exports = module.exports;
-      
-      // Evaluate the config in a function context
-      const evalFunc = new Function('module', 'exports', configContent);
-      evalFunc(module, exports);
-      
-      this.config = module.exports;
-      
-      return this.config || {};
+      // Simple require with cache clearing for fresh load
+      delete require.cache[require.resolve(configPath)];
+      return require(configPath);
     } catch (error: any) {
-      // If loading fails, return empty config
       logger.error(this.eventType, `Failed to load config: ${error.message}`);
       return {};
     }
   }
 
   async executeHook(hookName: string, input: ClaudeInput): Promise<void> {
-    const startTime = Date.now();
+    logger.info(this.eventType, `Running hook: ${hookName}`);
     
-    logger.hookStart(hookName, this.eventType, {
-      tool: input.tool_name
-    });
-
     return new Promise((resolve) => {
-      const hookProcess = spawn('npx', ['claude-code-hooks-cli', 'exec', hookName], {
+      const proc = spawn('npx', ['claude-code-hooks-cli', 'exec', hookName], {
         stdio: ['pipe', 'inherit', 'inherit'],
-        env: {
-          ...process.env,
-          CLAUDE_HOOK_NAME: hookName,
-          CLAUDE_HOOK_EVENT: this.eventType,
-          // Pass tool name for hooks that need it
-          CLAUDE_HOOK_TOOL: input.tool_name
-        }
+        env: { ...process.env, CLAUDE_HOOK_NAME: hookName }
       });
 
-      // Pass input to hook via stdin
-      hookProcess.stdin.write(JSON.stringify(input));
-      hookProcess.stdin.end();
-
-      hookProcess.on('close', (code) => {
-        const duration = Date.now() - startTime;
-        const success = code === 0;
-        
-        logger.hookEnd(hookName, this.eventType, duration, success, {
-          exitCode: code
-        });
-        
+      proc.stdin.write(JSON.stringify(input));
+      proc.stdin.end();
+      
+      proc.on('close', (code) => {
+        if (code !== 0) {
+          logger.warn(this.eventType, `Hook ${hookName} exited with code ${code}`);
+        }
         resolve();
       });
 
-      hookProcess.on('error', (error) => {
-        const duration = Date.now() - startTime;
-        logger.hookEnd(hookName, this.eventType, duration, false, {
-          error: error.message
-        });
+      proc.on('error', (error) => {
+        logger.error(this.eventType, `Hook ${hookName} error: ${error.message}`);
         resolve();
       });
     });
@@ -162,37 +76,27 @@ export class HookEntryPoint {
 
   matchesPattern(text: string, pattern: string): boolean {
     try {
-      const regex = new RegExp(pattern);
-      return regex.test(text);
-    } catch (error) {
-      logger.error(this.eventType, `Invalid regex pattern: ${pattern}`);
+      return new RegExp(pattern).test(text);
+    } catch {
       return false;
     }
   }
 
   matchesTool(toolName: string, matcher: string): boolean {
-    const tools = matcher.split('|').map(t => t.trim());
-    return tools.includes(toolName) || matcher === '*';
+    return matcher.split('|').map(t => t.trim()).includes(toolName) || matcher === '*';
   }
 
   async readInput(): Promise<ClaudeInput> {
     return new Promise((resolve, reject) => {
       let data = '';
-      
-      process.stdin.on('data', (chunk) => {
-        data += chunk;
-      });
-      
+      process.stdin.on('data', chunk => data += chunk);
       process.stdin.on('end', () => {
         try {
-          const input = JSON.parse(data);
-          resolve(input);
+          resolve(JSON.parse(data));
         } catch (error) {
           reject(new Error(`Failed to parse input: ${error}`));
         }
       });
-      
-      process.stdin.on('error', reject);
     });
   }
 }

@@ -1,32 +1,10 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import chalk from 'chalk';
-
-export interface LogEntry {
-  timestamp: string;
-  level: 'debug' | 'info' | 'warn' | 'error' | 'success';
-  event?: string;
-  hook?: string;
-  message: string;
-  data?: any;
-  duration?: number;
-}
 
 export class HookLogger {
   private static instance: HookLogger;
-  private logFile: string;
-  private logStream?: fs.WriteStream;
-  private verbose: boolean = false;
-  private testMode: boolean = false;
-  private logs: LogEntry[] = [];
+  private verbose: boolean = process.env.VERBOSE === 'true' || process.env.DEBUG === 'true';
 
-  private constructor() {
-    const logDir = path.join(process.cwd(), '.claude', 'logs');
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    this.logFile = path.join(logDir, `hooks-${new Date().toISOString().split('T')[0]}.log`);
-  }
+  private constructor() {}
 
   static getInstance(): HookLogger {
     if (!HookLogger.instance) {
@@ -39,63 +17,10 @@ export class HookLogger {
     this.verbose = verbose;
   }
 
-  setTestMode(testMode: boolean): void {
-    this.testMode = testMode;
-    if (testMode) {
-      this.logs = [];
-    }
-  }
-
-  private formatMessage(entry: LogEntry): string {
-    const timestamp = new Date(entry.timestamp).toISOString();
-    let message = `[${timestamp}] [${entry.level.toUpperCase()}]`;
+  private getColoredMessage(level: string, hook: string, message: string): string {
+    const prefix = `[${hook}]`;
     
-    if (entry.event) {
-      message += ` [${entry.event}]`;
-    }
-    
-    if (entry.hook) {
-      message += ` [${entry.hook}]`;
-    }
-    
-    message += ` ${entry.message}`;
-    
-    if (entry.duration !== undefined) {
-      message += ` (${entry.duration}ms)`;
-    }
-    
-    if (entry.data && this.verbose) {
-      message += `\n${JSON.stringify(entry.data, null, 2)}`;
-    }
-    
-    return message;
-  }
-
-  private writeToFile(entry: LogEntry): void {
-    if (!this.logStream) {
-      this.logStream = fs.createWriteStream(this.logFile, { flags: 'a' });
-    }
-    this.logStream.write(this.formatMessage(entry) + '\n');
-  }
-
-  private log(entry: LogEntry): void {
-    if (this.testMode) {
-      this.logs.push(entry);
-    }
-
-    this.writeToFile(entry);
-
-    if (this.verbose || entry.level === 'error' || entry.level === 'warn') {
-      const coloredMessage = this.getColoredMessage(entry);
-      console.log(coloredMessage);
-    }
-  }
-
-  private getColoredMessage(entry: LogEntry): string {
-    const prefix = `[${entry.hook || 'system'}]`;
-    const message = entry.message;
-    
-    switch (entry.level) {
+    switch (level) {
       case 'debug':
         return chalk.gray(`${prefix} ${message}`);
       case 'info':
@@ -111,91 +36,43 @@ export class HookLogger {
     }
   }
 
-  debug(hook: string, message: string, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: 'debug',
-      hook,
-      message,
-      data
-    });
+  debug(hook: string, message: string): void {
+    if (this.verbose) {
+      console.log(this.getColoredMessage('debug', hook, message));
+    }
   }
 
-  info(hook: string, message: string, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: 'info',
-      hook,
-      message,
-      data
-    });
+  info(hook: string, message: string): void {
+    if (this.verbose) {
+      console.log(this.getColoredMessage('info', hook, message));
+    }
   }
 
-  warn(hook: string, message: string, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: 'warn',
-      hook,
-      message,
-      data
-    });
+  warn(hook: string, message: string): void {
+    console.log(this.getColoredMessage('warn', hook, message));
   }
 
-  error(hook: string, message: string, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: 'error',
-      hook,
-      message,
-      data
-    });
+  error(hook: string, message: string): void {
+    console.log(this.getColoredMessage('error', hook, message));
   }
 
-  success(hook: string, message: string, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: 'success',
-      hook,
-      message,
-      data
-    });
+  success(hook: string, message: string): void {
+    if (this.verbose) {
+      console.log(this.getColoredMessage('success', hook, message));
+    }
   }
 
-  hookStart(hook: string, event: string, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: 'info',
-      event,
-      hook,
-      message: 'Hook started',
-      data
-    });
+  hookStart(hook: string, event: string): void {
+    if (this.verbose) {
+      console.log(this.getColoredMessage('info', hook, `${event} hook started`));
+    }
   }
 
-  hookEnd(hook: string, event: string, duration: number, success: boolean, data?: any): void {
-    this.log({
-      timestamp: new Date().toISOString(),
-      level: success ? 'success' : 'error',
-      event,
-      hook,
-      message: success ? 'Hook completed successfully' : 'Hook failed',
-      duration,
-      data
-    });
-  }
-
-  getTestLogs(): LogEntry[] {
-    return this.logs;
-  }
-
-  clearTestLogs(): void {
-    this.logs = [];
-  }
-
-  close(): void {
-    if (this.logStream) {
-      this.logStream.end();
-      this.logStream = undefined;
+  hookEnd(hook: string, event: string, duration: number, success: boolean): void {
+    if (this.verbose) {
+      const level = success ? 'success' : 'error';
+      const status = success ? 'completed' : 'failed';
+      console.log(this.getColoredMessage(level, hook, `${event} hook ${status} (${duration}ms)`));
     }
   }
 }
