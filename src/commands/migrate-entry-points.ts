@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
 import { HookSettings } from '../types.js';
+import { HookConfig } from '../entry-points/base.js';
 
 export async function migrateToEntryPoints(settingsPath?: string): Promise<void> {
   // Determine settings path
@@ -25,23 +26,63 @@ export async function migrateToEntryPoints(settingsPath?: string): Promise<void>
     hooks: {}
   };
   
+  // Try to load existing config.js to determine matchers
+  const configPath = path.join(path.dirname(targetPath), 'hooks', 'config.js');
+  let config: HookConfig | null = null;
+  
+  if (fs.existsSync(configPath)) {
+    try {
+      delete require.cache[require.resolve(configPath)];
+      const configModule = require(configPath);
+      config = configModule.default || configModule;
+    } catch (e) {
+      console.log(chalk.yellow('⚠️  Could not load config.js, using generic matchers'));
+    }
+  }
+  
   // Add entry points for each event type that has hooks
   if (settings.hooks?.PreToolUse && settings.hooks.PreToolUse.length > 0) {
-    newSettings.hooks.PreToolUse = [{
-      hooks: [{
-        type: 'command',
-        command: 'npx claude-code-hooks-cli pre-tool-use'
-      }]
-    }];
+    if (config?.preToolUse) {
+      // Create matcher-specific entries based on config
+      const matchers = Object.keys(config.preToolUse);
+      newSettings.hooks.PreToolUse = matchers.map(matcher => ({
+        matcher,
+        hooks: [{
+          type: 'command',
+          command: `npx claude-code-hooks-cli pre-tool-use --matcher "${matcher}"`
+        }]
+      }));
+    } else {
+      // Fallback to generic entry
+      newSettings.hooks.PreToolUse = [{
+        hooks: [{
+          type: 'command',
+          command: 'npx claude-code-hooks-cli pre-tool-use'
+        }]
+      }];
+    }
   }
   
   if (settings.hooks?.PostToolUse && settings.hooks.PostToolUse.length > 0) {
-    newSettings.hooks.PostToolUse = [{
-      hooks: [{
-        type: 'command',
-        command: 'npx claude-code-hooks-cli post-tool-use'
-      }]
-    }];
+    if (config?.postToolUse) {
+      // Create matcher-specific entries based on config
+      const matchers = Object.keys(config.postToolUse);
+      newSettings.hooks.PostToolUse = matchers.map(matcher => ({
+        matcher,
+        hooks: [{
+          type: 'command',
+          command: `npx claude-code-hooks-cli post-tool-use --matcher "${matcher}"`
+        }]
+      }));
+    } else {
+      // Fallback to generic entry
+      newSettings.hooks.PostToolUse = [{
+        hooks: [{
+          type: 'command',
+          command: 'npx claude-code-hooks-cli post-tool-use'
+        }]
+      }];
+    }
   }
   
   if (settings.hooks?.Stop && settings.hooks.Stop.length > 0) {
@@ -62,6 +103,15 @@ export async function migrateToEntryPoints(settingsPath?: string): Promise<void>
     }];
   }
   
+  if (settings.hooks?.PostWrite && settings.hooks.PostWrite.length > 0) {
+    newSettings.hooks.PostWrite = [{
+      hooks: [{
+        type: 'command',
+        command: 'npx claude-code-hooks-cli post-write'
+      }]
+    }];
+  }
+  
   // Backup old settings
   const backupPath = targetPath.replace('.json', '.backup.json');
   fs.writeFileSync(backupPath, JSON.stringify(settings, null, 2));
@@ -71,8 +121,7 @@ export async function migrateToEntryPoints(settingsPath?: string): Promise<void>
   fs.writeFileSync(targetPath, JSON.stringify(newSettings, null, 2));
   console.log(chalk.green('✓'), 'Updated settings.json with entry points');
   
-  // Check if config.js exists
-  const configPath = path.join(path.dirname(targetPath), 'hooks', 'config.js');
+  // Check if config.js exists (reuse configPath from above)
   if (!fs.existsSync(configPath)) {
     console.log(chalk.yellow('\n⚠️  No config.js found'));
     console.log(chalk.gray('A default config.js has been created based on your current hooks'));

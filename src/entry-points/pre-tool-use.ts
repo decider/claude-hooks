@@ -3,12 +3,18 @@
 import { HookEntryPoint } from './base.js';
 import { logger } from '../testing/logger.js';
 
-async function main() {
+async function main(options?: { matcher?: string }) {
   const entryPoint = new HookEntryPoint('PreToolUse');
   
   try {
     // Read input from Claude
     const input = await entryPoint.readInput();
+    
+    // If we have a matcher from settings.json, only process matching tools
+    if (options?.matcher && !entryPoint.matchesTool(input.tool_name, options.matcher)) {
+      logger.debug('PreToolUse', `Tool ${input.tool_name} doesn't match filter ${options.matcher}, skipping`);
+      return;
+    }
     
     // Load config (fresh each time)
     const config = await entryPoint.loadConfig();

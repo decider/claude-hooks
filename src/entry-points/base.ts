@@ -21,9 +21,52 @@ export interface HookConfig {
   };
 }
 
+/**
+ * Structure of JSON data sent by Claude via stdin
+ * 
+ * This is the abstraction layer's expected input format.
+ * Claude sends this JSON structure to our entry points for every hook event.
+ * 
+ * @example
+ * {
+ *   "tool_name": "Bash",
+ *   "tool_input": {
+ *     "command": "npm install axios",
+ *     "description": "Install axios package"
+ *   },
+ *   "hook_event_name": "PreToolUse"
+ * }
+ * 
+ * @example
+ * {
+ *   "tool_name": "Write", 
+ *   "tool_input": {
+ *     "file_path": "/src/index.ts",
+ *     "content": "console.log('hello');"
+ *   },
+ *   "hook_event_name": "PostToolUse"
+ * }
+ */
 export interface ClaudeInput {
+  /**
+   * The name of the tool being used
+   * Examples: "Bash", "Write", "Edit", "MultiEdit", "Read", "TodoWrite", etc.
+   */
   tool_name: string;
+  
+  /**
+   * Tool-specific input data. Structure varies by tool:
+   * - Bash: { command: string, description?: string, timeout?: number }
+   * - Write/Edit: { file_path: string, content?: string, old_string?: string, new_string?: string }
+   * - Read: { file_path: string, offset?: number, limit?: number }
+   * - Stop: {} (empty object)
+   */
   tool_input: any;
+  
+  /**
+   * The hook event that triggered this execution
+   * One of: "PreToolUse", "PostToolUse", "Stop", "PreWrite", "PostWrite"
+   */
   hook_event_name: string;
 }
 
@@ -77,9 +120,7 @@ export class HookEntryPoint {
     const startTime = Date.now();
     
     logger.hookStart(hookName, this.eventType, {
-      tool: input.tool_name,
-      matcher: process.env.CLAUDE_HOOK_MATCHER,
-      pattern: process.env.CLAUDE_HOOK_PATTERN
+      tool: input.tool_name
     });
 
     return new Promise((resolve) => {
@@ -88,7 +129,9 @@ export class HookEntryPoint {
         env: {
           ...process.env,
           CLAUDE_HOOK_NAME: hookName,
-          CLAUDE_HOOK_EVENT: this.eventType
+          CLAUDE_HOOK_EVENT: this.eventType,
+          // Pass tool name for hooks that need it
+          CLAUDE_HOOK_TOOL: input.tool_name
         }
       });
 

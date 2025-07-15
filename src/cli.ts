@@ -12,6 +12,7 @@ import { main as preToolUse } from './entry-points/pre-tool-use.js';
 import { main as postToolUse } from './entry-points/post-tool-use.js';
 import { main as stop } from './entry-points/stop.js';
 import { main as preWrite } from './entry-points/pre-write.js';
+import { main as postWrite } from './entry-points/post-write.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -64,11 +65,13 @@ program.addCommand(makeTestCommand());
 program
   .command('pre-tool-use')
   .description('Entry point for PreToolUse hooks (used internally)')
+  .option('--matcher <tools>', 'Tool matcher filter from settings.json')
   .action(preToolUse);
 
 program
   .command('post-tool-use')
   .description('Entry point for PostToolUse hooks (used internally)')
+  .option('--matcher <tools>', 'Tool matcher filter from settings.json')
   .action(postToolUse);
 
 program
@@ -80,6 +83,11 @@ program
   .command('pre-write')
   .description('Entry point for PreWrite hooks (used internally)')
   .action(preWrite);
+
+program
+  .command('post-write')
+  .description('Entry point for PostWrite hooks (used internally)')
+  .action(postWrite);
 
 program
   .command('migrate [path]')
