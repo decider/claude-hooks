@@ -6,6 +6,12 @@ import { init } from './commands/init.js';
 import { list } from './commands/list.js';
 import { manage } from './commands/manage.js';
 import { validate } from './commands/validate.js';
+import { makeTestCommand } from './commands/test.js';
+import { migrateToEntryPoints } from './commands/migrate-entry-points.js';
+import { main as preToolUse } from './entry-points/pre-tool-use.js';
+import { main as postToolUse } from './entry-points/post-tool-use.js';
+import { main as stop } from './entry-points/stop.js';
+import { main as preWrite } from './entry-points/pre-write.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -51,6 +57,34 @@ program
   .option('-v, --verbose', 'Show detailed validation information')
   .option('--fix', 'Automatically fix issues (not yet implemented)')
   .action(validate);
+
+program.addCommand(makeTestCommand());
+
+// Entry point commands for simplified hook management
+program
+  .command('pre-tool-use')
+  .description('Entry point for PreToolUse hooks (used internally)')
+  .action(preToolUse);
+
+program
+  .command('post-tool-use')
+  .description('Entry point for PostToolUse hooks (used internally)')
+  .action(postToolUse);
+
+program
+  .command('stop')
+  .description('Entry point for Stop hooks (used internally)')
+  .action(stop);
+
+program
+  .command('pre-write')
+  .description('Entry point for PreWrite hooks (used internally)')
+  .action(preWrite);
+
+program
+  .command('migrate [path]')
+  .description('Migrate settings.json to use simplified entry points')
+  .action(migrateToEntryPoints);
 
 // Main async function to handle startup tasks
 async function main() {
