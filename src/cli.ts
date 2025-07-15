@@ -6,11 +6,7 @@ import { init } from './commands/init.js';
 import { list } from './commands/list.js';
 import { manage } from './commands/manage.js';
 import { validate } from './commands/validate.js';
-import { main as preToolUse } from './entry-points/pre-tool-use.js';
-import { main as postToolUse } from './entry-points/post-tool-use.js';
-import { main as stop } from './entry-points/stop.js';
-import { main as preWrite } from './entry-points/pre-write.js';
-import { main as postWrite } from './entry-points/post-write.js';
+import { universalHook } from './commands/universal-hook.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -58,31 +54,11 @@ program
   .action(validate);
 
 
-// Entry point commands for simplified hook management
+// Universal hook entry point for all events
 program
-  .command('pre-tool-use')
-  .description('Entry point for PreToolUse hooks (used internally)')
-  .action(preToolUse);
-
-program
-  .command('post-tool-use')
-  .description('Entry point for PostToolUse hooks (used internally)')
-  .action(postToolUse);
-
-program
-  .command('stop')
-  .description('Entry point for Stop hooks (used internally)')
-  .action(stop);
-
-program
-  .command('pre-write')
-  .description('Entry point for PreWrite hooks (used internally)')
-  .action(preWrite);
-
-program
-  .command('post-write')
-  .description('Entry point for PostWrite hooks (used internally)')
-  .action(postWrite);
+  .command('universal-hook')
+  .description('Universal entry point for all hook events (used internally)')
+  .action(universalHook);
 
 
 // Main async function to handle startup tasks

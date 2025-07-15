@@ -1,200 +1,148 @@
-# Claude Hooks Entry Points System
+# Claude Hooks Universal Entry Point System
 
-This document explains the new simplified entry point system for Claude hooks that enables dynamic hook management without restarting Claude.
+This document explains the simplified universal entry point system for Claude hooks that enables dynamic hook management without restarting Claude.
 
 ## Overview
 
-The entry point system replaces individual hook registrations in `settings.json` with a small set of universal entry points that dynamically load hook configurations from a single file.
+The universal entry point system replaces individual hook registrations in `settings.json` with a single entry point that dynamically loads hook configurations from a configuration file.
 
 ### Benefits
 
-- **Never restart Claude** - Change hooks by editing config.js
-- **Simpler settings.json** - Only 4 entry points instead of dozens
+- **Never restart Claude** - Change hooks by editing config.cjs
+- **Ultra-simple settings.json** - Only 1 entry point for all events
 - **Faster iteration** - Test and modify hooks instantly
-- **Cleaner architecture** - All hook logic in one place
+- **Minimal code** - ~50 lines instead of 500+
 
 ## Architecture
 
-### 1. Entry Points
+### 1. Universal Entry Point
 
-Four universal entry points handle all hook events:
+One single entry point handles all hook events:
 
-- `pre-tool-use` - Runs before tools like Bash, Write, Edit
-- `post-tool-use` - Runs after tools complete
-- `stop` - Runs when Claude finishes a task
-- `pre-write` - Runs before writing files
+- `universal-hook` - Handles PreToolUse, PostToolUse, Stop, PreWrite, PostWrite
 
 ### 2. Configuration File
 
-All hook routing is controlled by `.claude/hooks/config.js`:
+All hook routing is controlled by `.claude/hooks/config.cjs`:
 
 ```javascript
 module.exports = {
-  // PreToolUse: Runs before tools
-  preToolUse: {
-    'Bash': {
-      '^git\\s+commit': ['typescript-check', 'lint-check'],
-      '^npm\\s+install': ['check-package-age'],
-    }
-  },
+  // PreToolUse: Runs before tools like Bash, Read, Write, etc.
+  preToolUse: ['typescript-check', 'lint-check'],
   
-  // PostToolUse: Runs after tools
-  postToolUse: {
-    'Write|Edit|MultiEdit': ['code-quality-validator'],
-  },
+  // PostToolUse: Runs after tools complete
+  postToolUse: ['code-quality-validator'],
   
-  // Stop: Runs when Claude finishes
-  stop: ['doc-compliance'],
+  // Stop: Runs when Claude finishes a task
+  stop: ['doc-compliance', 'task-completion-notify'],
   
   // PreWrite: Runs before writing files
-  preWrite: {
-    '\\.test-trigger$': ['self-test'],
-  }
+  preWrite: [],
+  
+  // PostWrite: Runs after writing files  
+  postWrite: []
 };
 ```
 
 ### 3. Hook Resolution
 
-1. Claude triggers event → Entry point command runs
-2. Entry point loads fresh config.js
-3. Matches patterns against current context
+1. Claude triggers event → Universal hook command runs
+2. Reads event type from input (`hook_event_name`)
+3. Loads fresh config.cjs
 4. Executes appropriate hooks via `exec` command
-5. Logs all activity for debugging
 
-## Migration Guide
+## Setup
 
-### From Old System
-
-If you have existing hooks in settings.json:
-
-```bash
-# Migrate automatically
-npx claude-code-hooks-cli migrate
-
-# Or migrate specific file
-npx claude-code-hooks-cli migrate /path/to/settings.json
-```
-
-This will:
-1. Backup your current settings.json
-2. Replace hook registrations with entry points
-3. Preserve your hook configurations in config.js
-
-### Manual Setup
-
-1. Update your settings.json:
+### One-time settings.json configuration:
 
 ```json
 {
-  "_comment": "Claude Code hooks - simplified entry points",
+  "_comment": "Claude Code hooks - universal entry point",
   "hooks": {
     "PreToolUse": [{
       "hooks": [{
         "type": "command",
-        "command": "npx claude-code-hooks-cli pre-tool-use"
+        "command": "npx claude-code-hooks-cli universal-hook"
       }]
     }],
     "PostToolUse": [{
       "hooks": [{
         "type": "command",
-        "command": "npx claude-code-hooks-cli post-tool-use"
+        "command": "npx claude-code-hooks-cli universal-hook"
       }]
     }],
     "Stop": [{
       "hooks": [{
         "type": "command",
-        "command": "npx claude-code-hooks-cli stop"
+        "command": "npx claude-code-hooks-cli universal-hook"
       }]
     }],
     "PreWrite": [{
       "hooks": [{
         "type": "command",
-        "command": "npx claude-code-hooks-cli pre-write"
+        "command": "npx claude-code-hooks-cli universal-hook"
+      }]
+    }],
+    "PostWrite": [{
+      "hooks": [{
+        "type": "command",
+        "command": "npx claude-code-hooks-cli universal-hook"
       }]
     }]
   }
 }
 ```
 
-2. Create `.claude/hooks/config.js` with your hook mappings
-
 ## Configuration Reference
 
-### PreToolUse
-
-Matches tools and command patterns:
+### Simple Array Format (Recommended)
 
 ```javascript
-preToolUse: {
-  'ToolName': {
-    'pattern': ['hook1', 'hook2'],
-    '^regex.*pattern$': ['hook3']
-  }
-}
+module.exports = {
+  preToolUse: ['hook1', 'hook2'],
+  postToolUse: ['hook3'],
+  stop: ['hook4', 'hook5'],
+  preWrite: [],
+  postWrite: []
+};
 ```
 
-- **ToolName**: Bash, Write, Edit, Read, etc.
-- **Pattern**: Regular expression to match against command/input
-- **Hooks**: Array of hook names to execute
+### Advanced Pattern Matching (Optional)
 
-### PostToolUse
-
-Matches tools after execution:
+For PreToolUse and PostToolUse, you can use pattern matching:
 
 ```javascript
-postToolUse: {
-  'Write|Edit|MultiEdit': ['code-quality-validator'],
-  'Bash': ['command-logger']
-}
-```
-
-### Stop
-
-Simple array of hooks to run on task completion:
-
-```javascript
-stop: ['doc-compliance', 'task-summary', 'notification']
-```
-
-### PreWrite
-
-Matches file paths before writing:
-
-```javascript
-preWrite: {
-  '\\.ts$': ['typescript-formatter'],
-  '\\.test\\.js$': ['test-validator'],
-  'package\\.json$': ['package-validator']
-}
+module.exports = {
+  preToolUse: {
+    'Bash': {
+      '^git\\s+commit': ['typescript-check', 'lint-check'],
+      '^npm\\s+install': ['check-package-age']
+    }
+  },
+  postToolUse: ['code-quality-validator'],
+  stop: ['doc-compliance']
+};
 ```
 
 ## Examples
 
 ### Add a New Hook
 
-Edit `.claude/hooks/config.js`:
+Edit `.claude/hooks/config.cjs`:
 
 ```javascript
 // Before
-preToolUse: {
-  'Bash': {
-    '^git\\s+commit': ['typescript-check'],
-  }
-}
+preToolUse: ['typescript-check'],
 
 // After - Added lint-check
-preToolUse: {
-  'Bash': {
-    '^git\\s+commit': ['typescript-check', 'lint-check'],
-  }
-}
+preToolUse: ['typescript-check', 'lint-check'],
 ```
 
 Changes take effect immediately!
 
 ### Disable a Hook Temporarily
 
-Simply comment it out:
+Simply remove it from the array:
 
 ```javascript
 stop: [
@@ -204,99 +152,38 @@ stop: [
 ]
 ```
 
-### Test New Patterns
-
-Add a test pattern and verify it works:
-
-```javascript
-preToolUse: {
-  'Bash': {
-    '^echo\\s+test': ['debug-hook'],  // Test pattern
-    // ... existing patterns
-  }
-}
-```
-
 ## Troubleshooting
 
 ### Hooks Not Running
 
-1. Check logs: `.claude/logs/hooks-YYYY-MM-DD.log`
-2. Verify config.js syntax is valid
-3. Test pattern matching with the test suite
-4. Enable verbose logging: `export CLAUDE_HOOK_VERBOSE=true`
+1. Check that config.cjs exists in `.claude/hooks/`
+2. Verify config.cjs syntax is valid
+3. Check hook names match available hooks (run `npx claude-code-hooks-cli list`)
 
-### Pattern Not Matching
+### Testing
 
-Test your regex:
-```javascript
-// In Node.js REPL
-const pattern = '^git\\s+commit';
-const command = 'git commit -m "test"';
-console.log(new RegExp(pattern).test(command)); // Should print true
-```
-
-### Performance Issues
-
-- Check hook execution times in logs
-- Consider running heavy hooks only on Stop event
-- Use more specific patterns to reduce hook calls
-
-## Testing
-
-Run the test suite to verify your configuration:
+Test the universal hook directly:
 
 ```bash
-# Test all entry points
-./test-entry-points.sh
+# Test Stop event
+echo '{"hook_event_name": "Stop"}' | npx claude-code-hooks-cli universal-hook
 
-# Test specific hook execution
-echo '{"tool_name": "Bash", "tool_input": {"command": "git commit"}}' | \
-  npx claude-code-hooks-cli pre-tool-use
+# Test PreToolUse event
+echo '{"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "git commit"}}' | npx claude-code-hooks-cli universal-hook
 ```
 
 ## Best Practices
 
-1. **Keep patterns specific** - Avoid overly broad matches
-2. **Group related hooks** - Run multiple hooks for same pattern
-3. **Use Stop for heavy tasks** - Don't slow down tool execution
-4. **Log appropriately** - Use logger for debugging
-5. **Test changes** - Verify patterns match as expected
+1. **Keep it simple** - Start with arrays, add patterns only if needed
+2. **Test changes** - Run test commands to verify hooks work
+3. **Use meaningful names** - Hook names should describe what they do
 
-## Advanced Usage
+## Migration from Old System
 
-### Conditional Hooks
+If you had the previous multi-entry-point system:
 
-Use complex patterns for conditional execution:
+1. Your settings.json already uses `universal-hook` commands
+2. Rename `.claude/hooks/config.js` to `.claude/hooks/config.cjs`
+3. Simplify the configuration to use arrays instead of nested patterns (unless needed)
 
-```javascript
-// Only on main branch commits
-'^git\\s+commit.*--amend': ['amend-validator'],
-
-// Only for specific file types
-'npm\\s+publish.*\\.beta\\.': ['beta-checker']
-```
-
-### Tool Combinations
-
-Match multiple tools with pipe syntax:
-
-```javascript
-'Write|Edit|MultiEdit': ['universal-validator'],
-'Bash|exec': ['command-logger']
-```
-
-### Debug Mode
-
-Create a debug configuration:
-
-```javascript
-// .claude/hooks/config.debug.js
-module.exports = {
-  preToolUse: {
-    '*': { '*': ['debug-logger'] }  // Log everything
-  }
-};
-```
-
-Then swap configs for debugging.
+That's it! The new system is designed to be as simple as possible while maintaining all functionality.
