@@ -138,7 +138,9 @@ const AVAILABLE_HOOKS: HookConfigs = {
   // Documentation compliance
   'doc-compliance': {
     event: 'Stop',
-    description: 'Check documentation standards for all markdown files at session end'
+    description: 'AI-powered code compliance checking with Gemini Flash (~5s analysis)',
+    requiresApiKey: true,
+    apiKeyType: 'gemini'
   }
 };
 
