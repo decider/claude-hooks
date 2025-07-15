@@ -137,10 +137,10 @@ const AVAILABLE_HOOKS: HookConfigs = {
   
   // Documentation compliance
   'doc-compliance': {
-    event: 'PostToolUse',
-    matcher: 'Write|Edit|MultiEdit',
-    pattern: '\\.md$',
-    description: 'Enforce documentation standards for markdown files'
+    event: 'Stop',
+    description: 'AI-powered code compliance checking with Gemini Flash (~5s analysis)',
+    requiresApiKey: true,
+    apiKeyType: 'gemini'
   }
 };
 
