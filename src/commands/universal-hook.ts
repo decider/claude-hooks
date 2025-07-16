@@ -4,6 +4,88 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 
+// Common fields for all hook events
+interface BaseHookInput {
+  session_id: string;
+  transcript_path: string;
+  hook_event_name: string;
+}
+
+// PreToolUse event
+interface PreToolUseInput extends BaseHookInput {
+  hook_event_name: 'PreToolUse';
+  tool_name: string;
+  tool_input: {
+    command?: string;
+    file_path?: string;
+    content?: string;
+    pattern?: string;
+    [key: string]: any;
+  };
+}
+
+// PostToolUse event
+interface PostToolUseInput extends BaseHookInput {
+  hook_event_name: 'PostToolUse';
+  tool_name: string;
+  tool_input: {
+    command?: string;
+    file_path?: string;
+    content?: string;
+    pattern?: string;
+    [key: string]: any;
+  };
+  tool_response: {
+    success?: boolean;
+    filePath?: string;
+    error?: string;
+    [key: string]: any;
+  };
+}
+
+// Stop event
+interface StopInput extends BaseHookInput {
+  hook_event_name: 'Stop';
+  stop_hook_active: boolean;
+}
+
+// SubagentStop event
+interface SubagentStopInput extends BaseHookInput {
+  hook_event_name: 'SubagentStop';
+  stop_hook_active: boolean;
+}
+
+// PreCompact event
+interface PreCompactInput extends BaseHookInput {
+  hook_event_name: 'PreCompact';
+  trigger: 'manual' | 'auto';
+  custom_instructions: string;
+}
+
+// PreWrite event
+interface PreWriteInput extends BaseHookInput {
+  hook_event_name: 'PreWrite';
+  file_path: string;
+  content: string;
+}
+
+// PostWrite event
+interface PostWriteInput extends BaseHookInput {
+  hook_event_name: 'PostWrite';
+  file_path: string;
+  content: string;
+  success: boolean;
+}
+
+// Notification event
+interface NotificationInput extends BaseHookInput {
+  hook_event_name: 'Notification';
+  message: string;
+}
+
+type HookInput = PreToolUseInput | PostToolUseInput | StopInput | SubagentStopInput | 
+                 PreCompactInput | PreWriteInput | PostWriteInput | NotificationInput;
+
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
   
@@ -14,7 +96,7 @@ async function readStdin(): Promise<string> {
   });
 }
 
-async function executeHook(hookName: string, input: any): Promise<void> {
+async function executeHook(hookName: string, input: HookInput): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn('npx', ['claude-code-hooks-cli', 'exec', hookName], {
       stdio: ['pipe', 'inherit', 'inherit']
@@ -37,7 +119,7 @@ export async function universalHook(): Promise<void> {
   try {
     // Read input from Claude
     const inputStr = await readStdin();
-    const input = JSON.parse(inputStr);
+    const input: HookInput = JSON.parse(inputStr);
     const eventType = input.hook_event_name;
     
     // Determine config path - try .cjs first, then .js
@@ -66,17 +148,32 @@ export async function universalHook(): Promise<void> {
     
     // For tool events, check if we need pattern matching
     if ((eventType === 'PreToolUse' || eventType === 'PostToolUse') && !Array.isArray(eventConfig)) {
-      const toolConfig = eventConfig[input.tool_name];
-      if (toolConfig) {
-        if (Array.isArray(toolConfig)) {
-          hooks.push(...toolConfig);
-        } else {
-          // Pattern matching for commands
-          const command = input.tool_input?.command || '';
-          for (const [pattern, hookList] of Object.entries(toolConfig)) {
-            if (new RegExp(pattern).test(command)) {
-              hooks.push(...(hookList as string[]));
+      // Type guard to ensure we have tool_name
+      if ('tool_name' in input) {
+        const toolConfig = eventConfig[input.tool_name];
+        if (toolConfig) {
+          if (Array.isArray(toolConfig)) {
+            hooks.push(...toolConfig);
+          } else {
+            // Pattern matching for commands
+            const command = input.tool_input?.command || '';
+            for (const [pattern, hookList] of Object.entries(toolConfig)) {
+              if (new RegExp(pattern).test(command)) {
+                hooks.push(...(hookList as string[]));
+              }
             }
+          }
+        }
+      }
+    }
+    
+    // For write events, check for file path pattern matching
+    if ((eventType === 'PreWrite' || eventType === 'PostWrite') && !Array.isArray(eventConfig)) {
+      // Type guard to ensure we have file_path
+      if ('file_path' in input) {
+        for (const [pattern, hookList] of Object.entries(eventConfig)) {
+          if (new RegExp(pattern).test(input.file_path)) {
+            hooks.push(...(hookList as string[]));
           }
         }
       }

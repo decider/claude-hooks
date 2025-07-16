@@ -19,9 +19,64 @@ The universal entry point system replaces individual hook registrations in `sett
 
 One single entry point handles all hook events:
 
-- `universal-hook` - Handles PreToolUse, PostToolUse, Stop, PreWrite, PostWrite
+- `universal-hook` - Handles all Claude hook events including:
+  - **PreToolUse** - Before tools execute (Bash, Write, Edit, etc.)
+  - **PostToolUse** - After tools complete
+  - **Stop** - When Claude finishes responding
+  - **SubagentStop** - When a Task subagent finishes
+  - **PreWrite** - Before writing files
+  - **PostWrite** - After writing files
+  - **PreCompact** - Before context compaction
+  - **Notification** - For user notifications
 
-### 2. Configuration File
+### 2. Hook Input Data
+
+Hooks receive comprehensive event data via stdin as JSON:
+
+```typescript
+// All events include:
+{
+  session_id: string,
+  transcript_path: string,
+  hook_event_name: string
+}
+
+// Tool events (PreToolUse, PostToolUse) add:
+{
+  tool_name: string,
+  tool_input: {
+    command?: string,    // For Bash
+    file_path?: string,  // For Write/Edit
+    content?: string,    // For Write/Edit
+    pattern?: string,    // For Grep
+    // ... other tool-specific fields
+  }
+}
+
+// PostToolUse also adds:
+{
+  tool_response: {
+    success?: boolean,
+    filePath?: string,
+    error?: string,
+    // ... tool-specific response data
+  }
+}
+
+// Write events (PreWrite, PostWrite) include:
+{
+  file_path: string,
+  content: string,
+  success?: boolean  // PostWrite only
+}
+
+// Stop events include:
+{
+  stop_hook_active: boolean
+}
+```
+
+### 3. Configuration File
 
 All hook routing is controlled by `.claude/hooks/config.cjs`:
 
@@ -109,18 +164,29 @@ module.exports = {
 
 ### Advanced Pattern Matching (Optional)
 
-For PreToolUse and PostToolUse, you can use pattern matching:
+You can use pattern matching for more granular control:
 
 ```javascript
 module.exports = {
+  // Tool command pattern matching
   preToolUse: {
     'Bash': {
       '^git\\s+commit': ['typescript-check', 'lint-check'],
       '^npm\\s+install': ['check-package-age']
-    }
+    },
+    'Write|Edit': ['auto-formatter']
   },
+  
+  // File path pattern matching
+  preWrite: {
+    '\\.test\\.(js|ts)$': ['test-validator'],
+    'package\\.json$': ['package-validator'],
+    '\\.md$': ['markdown-linter']
+  },
+  
   postToolUse: ['code-quality-validator'],
-  stop: ['doc-compliance']
+  stop: ['doc-compliance'],
+  subagentStop: ['task-summary']
 };
 ```
 
@@ -162,14 +228,34 @@ stop: [
 
 ### Testing
 
-Test the universal hook directly:
+Test the universal hook directly with complete event data:
 
 ```bash
 # Test Stop event
-echo '{"hook_event_name": "Stop"}' | npx claude-code-hooks-cli universal-hook
+echo '{
+  "session_id": "test-123",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "hook_event_name": "Stop",
+  "stop_hook_active": true
+}' | npx claude-code-hooks-cli universal-hook
 
 # Test PreToolUse event
-echo '{"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "git commit"}}' | npx claude-code-hooks-cli universal-hook
+echo '{
+  "session_id": "test-123",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Bash",
+  "tool_input": {"command": "git commit -m \"test\""}
+}' | npx claude-code-hooks-cli universal-hook
+
+# Test PreWrite event
+echo '{
+  "session_id": "test-123",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "hook_event_name": "PreWrite",
+  "file_path": "/src/test.js",
+  "content": "console.log(\"test\");"
+}' | npx claude-code-hooks-cli universal-hook
 ```
 
 ## Best Practices
