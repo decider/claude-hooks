@@ -6,6 +6,7 @@ import { init } from './commands/init.js';
 import { list } from './commands/list.js';
 import { manage } from './commands/manage.js';
 import { validate } from './commands/validate.js';
+import { universalHook } from './commands/universal-hook.js';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -51,6 +52,14 @@ program
   .option('-v, --verbose', 'Show detailed validation information')
   .option('--fix', 'Automatically fix issues (not yet implemented)')
   .action(validate);
+
+
+// Universal hook entry point for all events
+program
+  .command('universal-hook')
+  .description('Universal entry point for all hook events (used internally)')
+  .action(universalHook);
+
 
 // Main async function to handle startup tasks
 async function main() {

@@ -36,7 +36,7 @@ export interface HookSettingsValidation {
   };
 }
 
-export const VALID_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop'] as const;
+export const VALID_EVENTS = ['PreToolUse', 'PostToolUse', 'Stop', 'PreWrite', 'PostWrite'] as const;
 export type ValidEvent = typeof VALID_EVENTS[number];
 
 export const VALID_TOOLS = [
