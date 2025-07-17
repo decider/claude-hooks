@@ -1,5 +1,5 @@
 {
-  "_comment": "Claude Code hooks - universal entry point (edit .claude/hooks/config.js to manage hooks)",
+  "_comment": "Claude Code hooks - simplified entry points (edit .claude/hooks/config.cjs to manage hooks)",
   "hooks": {
     "PreToolUse": [
       {

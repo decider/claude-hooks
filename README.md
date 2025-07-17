@@ -120,6 +120,29 @@ All hooks run directly from the npm package via TypeScript commands. Your `.clau
 }
 ```
 
+## Writing Custom Hooks
+
+Want to create your own hooks? Check out:
+- 📖 **[Hook Development Guide](docs/HOOK-DEVELOPMENT.md)** - Complete guide with event data structures
+- 💡 **[Example Hooks](examples/hooks/)** - Working examples: command logger, file validator, multi-event monitor
+- 🔧 **[Entry Points Docs](docs/ENTRY-POINTS.md)** - How the universal hook system works
+
+Quick example of a custom hook:
+```javascript
+#!/usr/bin/env node
+// Read event data from stdin
+let input = '';
+process.stdin.on('data', chunk => input += chunk);
+process.stdin.on('end', () => {
+  const data = JSON.parse(input);
+  console.log(`Event: ${data.hook_event_name}`);
+  
+  if (data.tool_name === 'Bash') {
+    console.log(`Command: ${data.tool_input.command}`);
+  }
+});
+```
+
 ## Available Hooks
 
 ### Core Validation Hooks

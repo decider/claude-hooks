@@ -1,46 +1,39 @@
 /**
- * Claude Hooks Configuration - Universal Entry Point
+ * Claude Hooks Configuration - Entry Points System
  * Edit this file to control which hooks run - changes take effect immediately!
  * 
  * Note: This file uses .cjs extension for CommonJS compatibility with ES modules
  * 
- * Hooks receive ALL event data via stdin, including:
- * - session_id, transcript_path, hook_event_name (all events)
- * - tool_name, tool_input (PreToolUse, PostToolUse)
- * - tool_response (PostToolUse only)
- * - file_path, content (PreWrite, PostWrite)
- * - stop_hook_active (Stop, SubagentStop)
- * - message (Notification)
- * 
- * Simple configuration format:
- * - Each event type maps to an array of hook names
- * - No restart needed - just save this file
+ * Configuration format for Entry Points system:
+ * - Simple arrays: ['hook1', 'hook2'] 
+ * - Pattern matching: { 'Tool': { 'pattern': ['hooks'] } }
+ * - File patterns: { 'pattern': ['hooks'] } for Write events
  */
 
 module.exports = {
   // PreToolUse: Runs before tools like Bash, Read, Write, etc.
-  preToolUse: ['typescript-check', 'lint-check'],
+  preToolUse: {
+    'Bash': {
+      '^(npm\\s+(install|i|add)|yarn\\s+(add|install))\\s+': ['check-package-age'],
+      '^git\\s+commit': ['typescript-check', 'lint-check']
+    }
+  },
   
   // PostToolUse: Runs after tools complete
-  postToolUse: ['code-quality-validator'],
+  postToolUse: {
+    'Write|Edit|MultiEdit': ['code-quality-validator']
+  },
   
   // Stop: Runs when Claude finishes a task
-  stop: ['doc-compliance', 'task-completion-notify'],
-  
-  // SubagentStop: Runs when a Task subagent finishes
-  subagentStop: [],
+  stop: ['doc-compliance'],
   
   // PreWrite: Runs before writing files
-  preWrite: [],
+  preWrite: {
+    '\\.test-trigger$': ['self-test']
+  },
   
   // PostWrite: Runs after writing files  
-  postWrite: [],
-  
-  // PreCompact: Runs before context compaction
-  preCompact: [],
-  
-  // Notification: Runs for user notifications
-  notification: []
+  postWrite: {}
 };
 
 // Advanced usage (optional):
