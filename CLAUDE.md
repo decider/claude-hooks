@@ -56,12 +56,24 @@ User-added hooks - shown with `[custom]` label
 - commander@^11.0.0 - CLI framework
 - inquirer@^9.2.15 - Interactive prompts
 
+## Custom Slash Commands
+The project now includes custom Claude Code slash commands for enhanced workflow automation:
+
+### GitHub Workflow Commands
+- **`/gh:cpt`** - Complete GitHub workflow: commit → push → create PR → monitor CI/CD → fix failures → repeat until all checks pass
+  - Automatically handles staged changes
+  - Creates descriptive commits with proper attribution
+  - Creates PRs with structured summaries
+  - Monitors GitHub Actions every 30 seconds
+  - Fixes failures and repeats until all checks pass
+
 ## Architecture Notes
 - Written in TypeScript
 - Modular design with separate commands
 - Hook validation system
 - Interactive UI for hook management
 - Supports multiple settings file locations
+- Custom slash commands for workflow automation
 
 ---
 _Manually maintained project documentation_
