@@ -4,8 +4,8 @@
 import re
 from pathlib import Path
 
-# Configuration
-CONFIG = {
+# Default configuration (can be overridden by CONFIG from portable-quality-validator.py)
+DEFAULT_CONFIG = {
     'max_function_length': 30,
     'max_file_length': 200,
     'max_line_length': 100,
@@ -109,10 +109,12 @@ def check_py_functions(lines, violations, max_len):
     if in_func and func_name:
         _validate_py_function_length(func_name, func_start, len(lines) + 1, max_len, violations)
 
-def check_function_length(lines, file_type):
+def check_function_length(lines, file_type, config=None):
     """Check for functions that are too long."""
+    if config is None:
+        config = DEFAULT_CONFIG
     violations = []
-    max_len = CONFIG['max_function_length']
+    max_len = config.get('max_function_length', DEFAULT_CONFIG['max_function_length'])
     
     if file_type in ['typescript', 'javascript']:
         check_js_functions(lines, violations, max_len)
@@ -121,16 +123,21 @@ def check_function_length(lines, file_type):
     
     return violations
 
-def check_file_length(lines):
+def check_file_length(lines, config=None):
     """Check if file is too long."""
-    if len(lines) > CONFIG['max_file_length']:
-        return [f"File is {len(lines)} lines long (max: {CONFIG['max_file_length']})"]
+    if config is None:
+        config = DEFAULT_CONFIG
+    max_len = config.get('max_file_length', DEFAULT_CONFIG['max_file_length'])
+    if len(lines) > max_len:
+        return [f"File is {len(lines)} lines long (max: {max_len})"]
     return []
 
-def check_line_length(lines):
+def check_line_length(lines, config=None):
     """Check for lines that are too long."""
+    if config is None:
+        config = DEFAULT_CONFIG
     violations = []
-    max_len = CONFIG['max_line_length']
+    max_len = config.get('max_line_length', DEFAULT_CONFIG['max_line_length'])
     
     for i, line in enumerate(lines, 1):
         length = len(line.rstrip())
@@ -152,11 +159,13 @@ def _calculate_indent_level(line):
     spaces = line[:indent].count(' ')
     return tabs * 4 + spaces
 
-def check_nesting_depth(lines, file_type):
+def check_nesting_depth(lines, file_type, config=None):
     """Check for excessive nesting depth."""
+    if config is None:
+        config = DEFAULT_CONFIG
     violations = []
-    py_max = CONFIG.get('python_max_nesting', 3)
-    other_max = CONFIG['max_nesting_depth']
+    py_max = config.get('python_max_nesting', DEFAULT_CONFIG['python_max_nesting'])
+    other_max = config.get('max_nesting_depth', DEFAULT_CONFIG['max_nesting_depth'])
     max_nest = py_max if file_type == 'python' else other_max
     divisor = 4 if file_type == 'python' else 2
     

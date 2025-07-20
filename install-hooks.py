@@ -45,6 +45,58 @@ def update_gitignore():
             f.write('\n# Claude Code local settings\n')
             f.write('.claude/settings.local.json\n')
 
+def create_default_hooks_json():
+    """Create the default hooks.json configuration."""
+    return {
+        "version": 1,
+        "pre-tool": [
+            {
+                "id": "code-quality-validator",
+                "script": "hooks/portable-quality-validator.py",
+                "file_patterns": ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx"],
+                "priority": 80,
+                "config": {
+                    "max_function_length": 50,
+                    "max_line_length": 120,
+                    "max_nesting_depth": 4
+                }
+            },
+            {
+                "id": "package-age-check",
+                "script": "hooks/check-package-age.py",
+                "file_patterns": ["package.json", "requirements.txt", "Cargo.toml"],
+                "priority": 90,
+                "config": {
+                    "max_age_years": 2,
+                    "block_deprecated": True
+                }
+            }
+        ],
+        "post-tool": [
+            {
+                "id": "post-edit-validator",
+                "script": "hooks/post-tool-hook.py",
+                "file_patterns": ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx"],
+                "priority": 50
+            }
+        ],
+        "stop": [
+            {
+                "id": "quality-summary",
+                "script": "hooks/stop-hook.py",
+                "priority": 100
+            },
+            {
+                "id": "task-notification",
+                "script": "hooks/task-completion-notify.py",
+                "priority": 50,
+                "config": {
+                    "enabled": False
+                }
+            }
+        ]
+    }
+
 def print_success_message():
     """Print installation success message."""
     print("✅ Claude Code hooks installed successfully!")
@@ -53,6 +105,11 @@ def print_success_message():
     print("  - Package age validation (blocks old npm packages)")
     print("  - Task completion notifications (optional)")
     print("\nHooks will run automatically when using Claude Code.")
+    print("\nYou can now:")
+    print("  - List all hooks: python3 hooks/list_hooks.py list")
+    print("  - Explain hooks for a file: python3 hooks/list_hooks.py explain <file>")
+    print("  - Customize hooks by editing .claude/hooks.json")
+    print("  - Add directory-specific overrides with .claude-hooks.json files")
 
 def main():
     """Install hooks into .claude/settings.json."""
@@ -71,6 +128,12 @@ def main():
     settings_file = claude_dir / 'settings.json'
     with open(settings_file, 'w') as f:
         json.dump(create_settings(), f, indent=2)
+    
+    # Create hooks.json if it doesn't exist
+    hooks_json = claude_dir / 'hooks.json'
+    if not hooks_json.exists():
+        with open(hooks_json, 'w') as f:
+            json.dump(create_default_hooks_json(), f, indent=2)
     
     # Update .gitignore
     update_gitignore()

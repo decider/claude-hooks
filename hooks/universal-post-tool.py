@@ -1,64 +1,82 @@
 #!/usr/bin/env python3
-"""Universal PostToolUse dispatcher - routes to appropriate hooks based on tool type."""
+"""Universal PostToolUse dispatcher using hierarchical config."""
 
-import json
 import sys
-import subprocess
+import json
 import os
+import subprocess
+from config_loader import get_hooks_for_phase
 
-def run_hook(hook_script, input_data):
-    """Run a hook script and return its response."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    hook_path = os.path.join(script_dir, hook_script)
+def run_hook(hook, ctx):
+    """Run a single hook script with config passed via env."""
+    script_path = hook["script"]
     
-    if not os.path.exists(hook_path):
+    # Handle relative paths
+    if not os.path.isabs(script_path):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, "..", script_path)
+    
+    if not os.path.exists(script_path):
         return {"action": "continue"}
+    
+    # Set up environment with hook config
+    env = os.environ.copy()
+    env["CLAUDE_HOOK_CONFIG"] = json.dumps(hook.get("config", {}))
     
     try:
         result = subprocess.run(
-            ['python3', hook_path],
-            input=json.dumps(input_data),
+            ["python3", script_path],
+            input=json.dumps(ctx).encode(),
+            env=env,
             capture_output=True,
-            text=True
+            text=True,
         )
         
-        # If exit code 2, that means block
+        # Handle different return codes
         if result.returncode == 2:
+            # Legacy support: exit code 2 means block
             return {"action": "block", "message": result.stderr.strip()}
         
         if result.stdout:
             return json.loads(result.stdout.strip())
+        
         return {"action": "continue"}
-    except:
+    except Exception as e:
+        # On error, continue rather than block
         return {"action": "continue"}
-
-def parse_input():
-    """Parse input from stdin."""
-    try:
-        return json.loads(sys.stdin.read())
-    except:
-        return None
-
-def route_to_hook(input_data):
-    """Route to appropriate hook based on tool type."""
-    tool_name = input_data.get('tool_name', '')
-    
-    if tool_name in ['Write', 'Edit', 'MultiEdit']:
-        # Run quality validation on written files
-        return run_hook('post-tool-hook.py', input_data)
-    
-    # No post-processing for other tools yet
-    return {"action": "continue"}
 
 def main():
     """Main dispatcher entry point."""
-    input_data = parse_input()
-    if not input_data:
+    # Read input from stdin
+    try:
+        ctx = json.loads(sys.stdin.read())
+    except:
         print(json.dumps({"action": "continue"}))
         return
     
-    response = route_to_hook(input_data)
-    print(json.dumps(response))
+    # Get file path from tool input
+    tool_input = ctx.get("tool_input", {})
+    file_path = tool_input.get("file_path")
+    
+    if not file_path:
+        # No file path, no hooks to run
+        print(json.dumps({"action": "continue"}))
+        return
+    
+    # Get all post-tool hooks for this file
+    hooks = get_hooks_for_phase(file_path, "post-tool")
+    
+    # Run hooks in priority order
+    for hook in hooks:
+        result = run_hook(hook, ctx)
+        
+        # If any hook blocks, stop and return block
+        if result.get("action") == "block":
+            print(json.dumps(result))
+            return
+    
+    # All hooks passed
+    print(json.dumps({"action": "continue"}))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

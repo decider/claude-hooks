@@ -14,6 +14,9 @@ from validators import (
     get_fix_instruction
 )
 
+# Get configuration from environment
+CONFIG = json.loads(os.getenv("CLAUDE_HOOK_CONFIG", "{}"))
+
 def validate_file(filepath):
     """Validate a single file."""
     if not os.path.exists(filepath):
@@ -30,10 +33,10 @@ def validate_file(filepath):
         return []
     
     violations = []
-    violations.extend(check_file_length(lines))
-    violations.extend(check_line_length(lines))
-    violations.extend(check_function_length(lines, file_type))
-    violations.extend(check_nesting_depth(lines, file_type))
+    violations.extend(check_file_length(lines, CONFIG))
+    violations.extend(check_line_length(lines, CONFIG))
+    violations.extend(check_function_length(lines, file_type, CONFIG))
+    violations.extend(check_nesting_depth(lines, file_type, CONFIG))
     
     return violations
 

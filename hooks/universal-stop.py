@@ -1,75 +1,85 @@
 #!/usr/bin/env python3
-"""Universal Stop event dispatcher - runs all cleanup/notification hooks."""
+"""Universal Stop dispatcher using hierarchical config."""
 
-import json
 import sys
-import subprocess
+import json
 import os
+import subprocess
+from config_loader import ROOT, _read_yaml
 
-def run_hook(hook_script, input_data):
-    """Run a hook script and return its response."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    hook_path = os.path.join(script_dir, hook_script)
+def run_hook(hook, ctx):
+    """Run a single hook script with config passed via env."""
+    script_path = hook["script"]
     
-    if not os.path.exists(hook_path):
-        return {"action": "continue"}
+    # Handle relative paths
+    if not os.path.isabs(script_path):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, "..", script_path)
+    
+    if not os.path.exists(script_path):
+        return {}
+    
+    # Set up environment with hook config
+    env = os.environ.copy()
+    env["CLAUDE_HOOK_CONFIG"] = json.dumps(hook.get("config", {}))
     
     try:
         result = subprocess.run(
-            ['python3', hook_path],
-            input=json.dumps(input_data),
+            ["python3", script_path],
+            input=json.dumps(ctx).encode(),
+            env=env,
             capture_output=True,
-            text=True
+            text=True,
         )
         
-        # If exit code 2, that means block
+        # Handle different return codes
         if result.returncode == 2:
+            # Legacy support: exit code 2 means block
             return {"decision": "block", "reason": result.stderr.strip()}
         
         if result.stdout:
             return json.loads(result.stdout.strip())
-        return {}  # No decision means continue
-    except:
-        return {}  # No decision means continue
+        
+        return {}
+    except Exception as e:
+        # On error, continue
+        return {}
 
-def parse_input():
-    """Parse input from stdin."""
-    try:
-        return json.loads(sys.stdin.read())
-    except:
-        return None
-
-def run_all_stop_hooks(input_data):
-    """Run all stop hooks and collect responses."""
-    responses = []
+def get_stop_hooks():
+    """Get all stop hooks from root config only."""
+    # Stop hooks are global, not file-specific
+    root_cfg = _read_yaml(os.path.join(ROOT, ".claude", "hooks.yaml"))
+    hooks = root_cfg.get("stop", [])
     
-    # 1. Run quality validator for final checks
-    responses.append(run_hook('stop-hook.py', input_data))
-    
-    # 2. Send completion notification
-    responses.append(run_hook('task-completion-notify.py', input_data))
-    
-    return responses
-
-def check_for_blocks(responses):
-    """Check if any hook wants to block."""
-    for response in responses:
-        if response.get('decision') == 'block':
-            return response
-    return None
+    # Sort by priority (highest first)
+    return sorted(hooks, key=lambda h: h.get("priority", 0), reverse=True)
 
 def main():
     """Main dispatcher entry point."""
-    input_data = parse_input()
-    if not input_data:
-        print(json.dumps({"action": "continue"}))
+    # Read input from stdin
+    try:
+        ctx = json.loads(sys.stdin.read())
+    except:
+        # No output for stop hooks by default
         return
     
-    responses = run_all_stop_hooks(input_data)
-    block_response = check_for_blocks(responses)
+    # Get all stop hooks
+    hooks = get_stop_hooks()
     
-    if block_response:
-        print(json.dumps(block_response))
+    # Run hooks in priority order
+    responses = []
+    for hook in hooks:
+        result = run_hook(hook, ctx)
+        if result:
+            responses.append(result)
+    
+    # Check if any hook wants to block
+    for response in responses:
+        if response.get("decision") == "block":
+            print(json.dumps(response))
+            return
+    
+    # No blocking response, output nothing
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

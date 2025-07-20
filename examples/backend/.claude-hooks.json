@@ -1,0 +1,26 @@
+{
+  "_comment": "Backend-specific hook configuration",
+  "_comment2": "Overrides for all backend code",
+  "pre-tool": [
+    {
+      "id": "code-quality-validator",
+      "config": {
+        "max_line_length": 100,
+        "max_function_length": 40,
+        "enforce_type_hints": true
+      }
+    },
+    {
+      "id": "security-scanner",
+      "script": "hooks/security_scanner.py",
+      "file_patterns": ["*.py"],
+      "priority": 100,
+      "disable": true,
+      "_comment": "Would need to be implemented"
+    },
+    {
+      "id": "js-linter",
+      "disable": true
+    }
+  ]
+}

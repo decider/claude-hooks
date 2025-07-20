@@ -1,25 +1,49 @@
 {
-  "example-project-hook": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^echo\\s+test",
-    "description": "Example project-specific hook for demonstration",
-    "command": "echo 'This is an example project hook!'"
-  },
-  "custom-commit-check": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^git\\s+commit",
-    "description": "Custom commit validation for this project",
-    "command": "./scripts/validate-commit.sh"
-  },
-  "doc-compliance": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^stop$",
-    "description": "Check code changes against documentation standards when stopping",
-    "command": "./.claude/hooks/doc-compliance.sh",
-    "requiresApiKey": true,
-    "apiKeyType": "gemini"
-  }
+  "version": 1,
+  "pre-tool": [
+    {
+      "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py",
+      "file_patterns": ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx"],
+      "priority": 80,
+      "config": {
+        "max_function_length": 50,
+        "max_line_length": 120,
+        "max_nesting_depth": 4
+      }
+    },
+    {
+      "id": "package-age-check",
+      "script": "hooks/check-package-age.py",
+      "file_patterns": ["package.json", "requirements.txt", "Cargo.toml"],
+      "priority": 90,
+      "config": {
+        "max_age_years": 2,
+        "block_deprecated": true
+      }
+    }
+  ],
+  "post-tool": [
+    {
+      "id": "post-edit-validator",
+      "script": "hooks/post-tool-hook.py",
+      "file_patterns": ["*.py", "*.js", "*.jsx", "*.ts", "*.tsx"],
+      "priority": 50
+    }
+  ],
+  "stop": [
+    {
+      "id": "quality-summary",
+      "script": "hooks/stop-hook.py",
+      "priority": 100
+    },
+    {
+      "id": "task-notification",
+      "script": "hooks/task-completion-notify.py",
+      "priority": 50,
+      "config": {
+        "enabled": false
+      }
+    }
+  ]
 }
