@@ -27,7 +27,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-RULES_FILE="${CLAUDE_RULES_FILE:-$SCRIPT_DIR/clean-code-rules.json}"
+RULES_FILE="${CLAUDE_RULES_FILE:-/Users/danseider/claude-hooks/.claude/hooks/quality-config.json}"
 
 # Check if this is a Stop event (no tool)
 EVENT_TYPE=$(echo "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null)
@@ -38,8 +38,8 @@ if [[ "$EVENT_TYPE" == "Stop" ]]; then
     echo "[$(date)] Processing Stop event" >> "$LOG_FILE"
     # For Stop events, check recently modified files
     
-    # Find all TypeScript files modified in the last 10 minutes (exclude node_modules and .d.ts)
-    RECENT_FILES=$(find . \( -name "*.ts" -o -name "*.tsx" \) -mtime -10m 2>/dev/null | grep -v node_modules | grep -v "\.d\.ts$" | head -20)
+    # Find all TypeScript files modified in the last 10 minutes (exclude node_modules, .d.ts, and lib/)
+    RECENT_FILES=$(find . \( -name "*.ts" -o -name "*.tsx" \) -mtime -10m 2>/dev/null | grep -v node_modules | grep -v "\.d\.ts$" | grep -v "^./lib/" | head -20)
     
     echo "[$(date)] Found files: $RECENT_FILES" >> "$LOG_FILE"
     
