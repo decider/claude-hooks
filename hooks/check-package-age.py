@@ -4,7 +4,7 @@
 import json
 import sys
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 from package_utils import (
@@ -77,7 +77,7 @@ def process_package_age(package_name, version, package_info):
         return True, None
     
     # Calculate age
-    age_days = (datetime.now() - publish_date).days
+    age_days = (datetime.now(timezone.utc) - publish_date).days
     
     if age_days <= MAX_AGE_DAYS:
         log_package_age(package_name, version, age_days)

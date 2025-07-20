@@ -5,7 +5,7 @@ import re
 import urllib.request
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 def parse_package_spec(package_spec):
     """Parse package@version into name and version."""
@@ -51,7 +51,7 @@ def get_latest_version_info(package_info, current_version):
         return latest_version, None
         
     latest_date = datetime.fromisoformat(latest_time.replace('Z', '+00:00'))
-    latest_age_days = (datetime.now() - latest_date).days
+    latest_age_days = (datetime.now(timezone.utc) - latest_date).days
     return latest_version, latest_age_days
 
 def extract_packages_from_command(command):
