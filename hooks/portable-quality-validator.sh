@@ -3,7 +3,12 @@
 # Portable Code Quality Validator
 # Works with TypeScript, JavaScript, Python, Ruby, and more
 
-set -euo pipefail
+set -uo pipefail
+
+# Debug mode
+if [[ "${DEBUG_HOOKS:-}" == "1" ]]; then
+    set -x
+fi
 
 # Script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -35,10 +40,10 @@ log "Event: $EVENT_TYPE, Tool: $TOOL, File: $FILE_PATH"
 
 # Load configuration
 if [[ -f "$RULES_FILE" ]]; then
-    MAX_FUNCTION_LINES=$(grep -o '"maxFunctionLines":[^,}]*' "$RULES_FILE" | cut -d':' -f2 | tr -d ' ' || echo "30")
-    MAX_FILE_LINES=$(grep -o '"maxFileLines":[^,}]*' "$RULES_FILE" | cut -d':' -f2 | tr -d ' ' || echo "200")
-    MAX_LINE_LENGTH=$(grep -o '"maxLineLength":[^,}]*' "$RULES_FILE" | cut -d':' -f2 | tr -d ' ' || echo "100")
-    MAX_NESTING=$(grep -o '"maxNestingDepth":[^,}]*' "$RULES_FILE" | cut -d':' -f2 | tr -d ' ' || echo "4")
+    MAX_FUNCTION_LINES=$(grep -o '"maxFunctionLines":[^,}]*' "$RULES_FILE" 2>/dev/null | cut -d':' -f2 | tr -d ' ') || MAX_FUNCTION_LINES=30
+    MAX_FILE_LINES=$(grep -o '"maxFileLines":[^,}]*' "$RULES_FILE" 2>/dev/null | cut -d':' -f2 | tr -d ' ') || MAX_FILE_LINES=200
+    MAX_LINE_LENGTH=$(grep -o '"maxLineLength":[^,}]*' "$RULES_FILE" 2>/dev/null | cut -d':' -f2 | tr -d ' ') || MAX_LINE_LENGTH=100
+    MAX_NESTING=$(grep -o '"maxNestingDepth":[^,}]*' "$RULES_FILE" 2>/dev/null | cut -d':' -f2 | tr -d ' ') || MAX_NESTING=4
 else
     MAX_FUNCTION_LINES=30
     MAX_FILE_LINES=200
