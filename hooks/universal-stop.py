@@ -5,7 +5,7 @@ import sys
 import json
 import os
 import subprocess
-from config_loader import ROOT, _read_yaml
+from config_loader import ROOT, _read_json
 
 def run_hook(hook, ctx):
     """Run a single hook script with config passed via env."""
@@ -48,7 +48,7 @@ def run_hook(hook, ctx):
 def get_stop_hooks():
     """Get all stop hooks from root config only."""
     # Stop hooks are global, not file-specific
-    root_cfg = _read_yaml(os.path.join(ROOT, ".claude", "hooks.yaml"))
+    root_cfg = _read_json(os.path.join(ROOT, ".claude", "hooks.json"))
     hooks = root_cfg.get("stop", [])
     
     # Sort by priority (highest first)
