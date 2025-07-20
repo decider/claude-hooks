@@ -43,107 +43,64 @@ Each hook receives event data via stdin and can:
 
 ### Code Quality Validator
 Enforces clean code standards on file edits:
-- Maximum function length (50 lines)
-- Maximum file length (300 lines)
+- Maximum function length (30 lines)
+- Maximum file length (200 lines)
+- Maximum line length (100 characters)
 - Maximum nesting depth (4 levels)
-- Cyclomatic complexity limits
 
 ### Package Age Checker
-Prevents installation of severely outdated npm/yarn packages:
-- Blocks packages older than 5 years
-- Warns for packages older than 3 years
-- Provides helpful suggestions for alternatives
+Prevents installation of outdated npm/yarn packages:
+- Blocks packages older than 180 days (configurable)
+- Shows latest available versions
+- Runs on `npm install` and `yarn add` commands
 
 ### Task Completion Notifier
-Sends system notifications when Claude completes tasks (optional).
+Sends notifications when Claude completes tasks:
+- Pushover support for mobile notifications
+- macOS native notifications
+- Linux desktop notifications
 
 ## Configuration
 
-Hooks are configured in `.claude/settings.json`:
+### Environment Variables
+- `MAX_AGE_DAYS` - Maximum age for packages (default: 180)
+- `CLAUDE_HOOKS_TEST_MODE` - Enable test mode
+- `PUSHOVER_USER_KEY` - Your Pushover user key
+- `PUSHOVER_APP_TOKEN` - Your Pushover app token
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "hooks": [{
-        "type": "command",
-        "command": "python3 .claude/hooks/universal-pre-tool.py"
-      }]
-    }],
-    "PostToolUse": [{
-      "hooks": [{
-        "type": "command",
-        "command": "python3 .claude/hooks/universal-post-tool.py"
-      }]
-    }],
-    "Stop": [{
-      "hooks": [{
-        "type": "command",
-        "command": "python3 .claude/hooks/universal-stop.py"
-      }]
-    }]
-  }
-}
+### Pushover Setup
+1. Get the Pushover app ($5 one-time): https://pushover.net/clients
+2. Create an app at: https://pushover.net/apps/build
+3. Add to your `.env` file:
+```
+PUSHOVER_USER_KEY=your_user_key
+PUSHOVER_APP_TOKEN=your_app_token
 ```
 
-## Writing Custom Hooks
+## Hook Architecture
 
-To add custom validation logic, edit the universal hook files in `.claude/hooks/`:
-
-```python
-# Example: Add custom validation to universal-pre-tool.py
-def handle_pre_tool_event(data):
-    tool_name = data.get('tool_name', '')
-    
-    if tool_name == 'Bash':
-        command = data.get('tool_input', {}).get('command', '')
-        # Add your custom logic here
-        if 'dangerous_command' in command:
-            print("❌ Blocked: This command is not allowed")
-            sys.exit(1)
-```
-
-## Project Structure
-
-```
-.claude/
-├── settings.json         # Hook configuration
-├── settings.local.json   # Personal settings (git ignored)
-└── hooks/
-    ├── universal-pre-tool.py
-    ├── universal-post-tool.py
-    ├── universal-stop.py
-    ├── check_package_age.py
-    ├── code_quality_validator.py
-    └── validators.py
-```
-
-## Migration from CLI Version
-
-If you were using the previous npm-based CLI version:
-1. Uninstall the old package: `npm uninstall -g claude-code-hooks-cli`
-2. Run the new installer: `python3 install-hooks.py`
-3. Your hooks will work the same way, just without the CLI commands
-
-## Benefits
-
-✅ **No dependencies** - Pure Python, no npm or node_modules required  
-✅ **Portable** - Works on any system with Python 3  
-✅ **Simple** - Direct integration, no complex CLI needed  
-✅ **Lightweight** - Minimal footprint in your project  
-✅ **Version control friendly** - Easy to customize and commit  
+The system uses a dispatcher pattern:
+- `universal-*.py` - Main dispatchers that route to specific hooks
+- Individual hook files handle specific functionality
+- All hooks use JSON for input/output communication
 
 ## Development
 
-To modify or extend hooks:
-1. Edit the Python files in `.claude/hooks/`
-2. Test your changes - hooks run automatically in Claude Code
-3. Commit your customizations to share with your team
+### Adding New Hooks
+1. Create a new Python script in `hooks/`
+2. Read JSON input from stdin
+3. Output JSON response with `action` field
+4. Register in the appropriate universal dispatcher
 
-## Contributing
+### Testing Hooks
+```bash
+# Test with sample input
+echo '{"tool_name": "Write", "file_path": "test.py"}' | python3 hooks/post-tool-hook.py
 
-Contributions are welcome! This project uses Python for simplicity and portability.
+# Enable test mode
+export CLAUDE_HOOKS_TEST_MODE=1
+```
 
 ## License
 
-MIT
+MIT License - See LICENSE file for details
