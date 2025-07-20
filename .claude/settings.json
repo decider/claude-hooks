@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/danseider/claude-hooks/lib/commands/universal-hook.js"
+            "command": "node lib/commands/universal-hook.js"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/danseider/claude-hooks/lib/hooks/pre-write-analyzer.js"
+            "command": "node lib/hooks/pre-write-analyzer.js"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node /Users/danseider/claude-hooks/lib/commands/universal-hook.js"
+            "command": "node lib/commands/universal-hook.js"
           }
         ]
       }
