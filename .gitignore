@@ -48,6 +48,14 @@ temp/
 # Compiled TypeScript output
 lib/
 
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
 # CLAUDE.md backup files
 CLAUDE.md.backup
 *.CLAUDE.md.backup
