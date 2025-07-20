@@ -28,7 +28,7 @@ module.exports = {
   },
   
   // Stop: Runs when Claude finishes a task
-  stop: ['doc-compliance']
+  stop: ['doc-compliance', 'code-quality-validator']
 };
 
 // Advanced usage (optional):
