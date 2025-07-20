@@ -151,13 +151,12 @@ def handle_post_tool_use(data):
     if filepath:
         violations = validate_file(filepath)
         if violations:
-            msg_lines = [f"Code quality issues in {filepath}:"]
-            msg_lines.extend(f"  - {v}" for v in violations)
-            print(json.dumps({
-                "decision": "block",
-                "reason": "\n".join(msg_lines)
-            }))
-            sys.exit(0)
+            # Provide strong warning but don't block
+            print(f"\n⚠️  WARNING: Code quality issues in {filepath}:", file=sys.stderr)
+            for v in violations:
+                print(f"  - {v}", file=sys.stderr)
+            print("\n🚨 YOU WILL BE BLOCKED at session end if these aren't fixed!", file=sys.stderr)
+            print("   Fix these issues now to avoid being blocked later.\n", file=sys.stderr)
 
 def handle_stop_event():
     """Handle Stop event."""
