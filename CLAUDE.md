@@ -1,67 +1,34 @@
-# Claude Hooks CLI
+# Claude Hooks
 
-A command-line tool for managing Claude Code hooks - validation and quality checks that run automatically within Claude.
+A Python-based hook system for Claude Code that provides automatic validation and quality checks.
 
 ## Overview
-This project provides a CLI tool to easily manage hooks for Claude Code (claude.ai/code). Hooks allow you to run validation, linting, type checking, and other quality checks automatically before certain actions in Claude.
-
-## Hook Discovery System
-The CLI can automatically discover project-specific hooks! Create a `.claude/hooks.json` file in your project:
-
-```json
-{
-  "project-lint": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^git\\s+commit",
-    "description": "Run project-specific linting",
-    "command": "./scripts/lint.sh"
-  }
-}
-```
-
-These hooks will appear in the manager with a `[project]` label.
+This project provides Python hooks that integrate with Claude Code (claude.ai/code). Hooks allow you to run validation, linting, type checking, and other quality checks automatically during Claude sessions.
 
 ## Available Hooks
 
 ### Built-in Hooks
 #### Code Quality
-- **typescript-check**: TypeScript type checking before git commits
-- **lint-check**: Code linting (ESLint, etc.) before git commits  
-- **test-check**: Run test suite before various operations
 - **code-quality-validator**: Enforces clean code standards (function length, nesting, etc.) after file edits
 
 #### Package Management
 - **check-package-age**: Prevents installation of outdated npm/yarn packages
 
 #### Notifications
-- **task-completion-notify**: System notifications for completed tasks
+- **task-completion-notify**: System notifications for completed tasks (optional)
 
-### Project Hooks
-Discovered from `.claude/hooks.json` - shown with `[project]` label
-
-### Custom Hooks
-User-added hooks - shown with `[custom]` label
-
-## Commands
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm run dev` - Watch mode for development
-- `npm run typecheck` - Type check without emitting
-- `npm run prepublishOnly` - Build before publishing
-- `npm run test` - Run tests (placeholder)
-- `npm run lint` - Run linter (placeholder)
-
-## Dependencies
-- chalk@^5.3.0 - Terminal styling
-- commander@^11.0.0 - CLI framework
-- inquirer@^9.2.15 - Interactive prompts
+## Installation
+Run the installer to set up hooks in your project:
+```bash
+python3 install-hooks.py
+```
 
 ## Architecture Notes
-- Written in TypeScript
-- Modular design with separate commands
-- Hook validation system
-- Interactive UI for hook management
-- Supports multiple settings file locations
+- Written in Python for portability
+- Hook scripts stored in `.claude/hooks/`
+- Configuration in `.claude/settings.json`
+- Three universal entry points: PreToolUse, PostToolUse, Stop
+- Each hook validates specific conditions and provides feedback
 
 ---
 _Manually maintained project documentation_

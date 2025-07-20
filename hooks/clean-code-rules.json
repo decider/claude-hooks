@@ -1,9 +1,0 @@
-{
-  "rules": {
-    "maxFunctionLines": 20,
-    "maxFileLines": 100,
-    "maxNestingDepth": 3,
-    "maxParameters": 3,
-    "maxLineLength": 80
-  }
-}

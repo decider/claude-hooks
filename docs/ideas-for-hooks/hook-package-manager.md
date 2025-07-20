@@ -2,7 +2,9 @@
 
 ## Overview
 
-A package management system for Claude hooks that enables discovering, sharing, and importing hooks from various repositories. This creates an ecosystem where developers can share their best Claude automation patterns and quickly adopt proven workflows.
+A proposed package management system for Claude hooks that would enable discovering, sharing, and importing hooks from various repositories. This would create an ecosystem where developers can share their best Claude automation patterns and quickly adopt proven workflows.
+
+**Note: This is a conceptual proposal. The current claude-hooks implementation uses Python scripts installed via `python3 install-hooks.py`.**
 
 ## Problem Statement
 
@@ -17,49 +19,49 @@ Currently, Claude hooks are:
 
 ### 1. Hook Discovery System
 Automatically discovers hooks in repositories:
-```typescript
-interface HookSource {
-  type: 'built-in' | 'local' | 'remote' | 'registry';
-  location: string;
-  hooks: HookDefinition[];
-  metadata: {
-    author: string;
-    version: string;
-    description: string;
-    tags: string[];
-  };
-}
+```python
+# Conceptual structure for hook sources
+class HookSource:
+    def __init__(self, type, location, hooks, metadata):
+        self.type = type  # 'built-in', 'local', 'remote', 'registry'
+        self.location = location
+        self.hooks = hooks
+        self.metadata = metadata
 ```
 
 ### 2. Hook Registry
 Central catalog of available hooks:
-```typescript
-interface HookRegistry {
-  version: string;
-  sources: HookSource[];
-  installed: InstalledHook[];
-  available: AvailableHook[];
-  featured: FeaturedHook[];
-}
+```python
+# Conceptual registry structure
+class HookRegistry:
+    def __init__(self):
+        self.version = "1.0.0"
+        self.sources = []
+        self.installed = []
+        self.available = []
+        self.featured = []
 ```
 
 ### 3. Import/Export Mechanism
 Simple commands for hook management:
 ```bash
+# Conceptual commands (not yet implemented)
+# These would be future enhancements to the Python-based system
+
 # Import a specific hook from a repository
-claude-hooks import user/repo:pre-commit-quality
+python3 claude-hooks-manager.py import user/repo:pre-commit-quality
 
 # Import all hooks from a repository
-claude-hooks import user/repo
+python3 claude-hooks-manager.py import user/repo
 
 # Export hooks for sharing
-claude-hooks export my-awesome-hooks
+python3 claude-hooks-manager.py export my-awesome-hooks
 
 # Search available hooks
-claude-hooks search "typescript"
+python3 claude-hooks-manager.py search "quality"
 
 # List installed hooks
-claude-hooks list
+python3 claude-hooks-manager.py list
 ```
 
 ## Implementation
@@ -92,12 +94,13 @@ hooks:
 
 ### Discovery Patterns
 The system looks for hooks in these locations:
-```typescript
-const DISCOVERY_PATTERNS = [
-  '.claude-hooks/**/*.{js,ts,sh}',
-  'claude/hooks/**/*.{js,ts,sh}',
-  '.claude/hooks/**/*.{js,ts,sh}',
-  'hooks/claude/**/*.{js,ts,sh}',
+```python
+# Discovery patterns for Python-based hooks
+DISCOVERY_PATTERNS = [
+    '.claude-hooks/**/*.py',
+    'claude/hooks/**/*.py',
+    '.claude/hooks/**/*.py',
+    'hooks/claude/**/*.py',
   '.github/claude-hooks/**/*.{js,ts,sh}'
 ];
 ```

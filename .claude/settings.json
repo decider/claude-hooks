@@ -5,29 +5,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node lib/commands/universal-hook.js"
+            "command": "python3 hooks/universal-stop.py"
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "node lib/hooks/pre-write-analyzer.js"
+            "command": "python3 hooks/universal-pre-tool.py"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "node lib/commands/universal-hook.js"
+            "command": "python3 hooks/universal-post-tool.py"
           }
         ]
       }

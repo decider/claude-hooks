@@ -6,21 +6,20 @@ This system enforces Uncle Bob's Clean Code principles and promotes code reuse t
 
 The system consists of three main hooks that work together:
 
-1. **Pre-Hook (code-quality-primer.sh)**: Reminds about Clean Code principles and checks for existing code
-2. **Post-Hook (code-quality-validator.sh)**: Validates code against Clean Code rules
-3. **Code Index (build-code-index.sh)**: Maintains searchable index of functions/utilities
+1. **Pre-Hook (code quality validation in universal-post-tool.py)**: Validates code against Clean Code rules
+2. **Code Quality Validator (code_quality_validator.py)**: Enforces clean code standards
+3. **Validation Library (validators.py)**: Shared validation functions
 
 ## Clean Code Rules
 
 Based on `clean-code-rules.json`:
 
 ### Size Limits
-- **Functions**: Max 20 lines (promotes single responsibility)
-- **Files**: Max 100 lines (150 for components)
-- **Classes**: Max 5 public methods
-- **Parameters**: Max 3 per function
-- **Nesting**: Max 3 levels deep
-- **Line Length**: Max 80 characters
+- **Functions**: Max 50 lines (promotes single responsibility)
+- **Files**: Max 300 lines
+- **Nesting**: Max 4 levels deep
+- **Line Length**: Max 120 characters
+- **Cyclomatic Complexity**: Max 10
 
 ### Code Quality Checks
 - **Magic Numbers**: Must use named constants (except 0, 1, -1)
@@ -54,10 +53,7 @@ The validator hook checks:
 - Repeated patterns
 
 ### 3. Code Index
-Build the index periodically:
-```bash
-./claude/hooks/build-code-index.sh
-```
+The Python-based validator runs automatically on file edits.
 
 This creates a searchable database of:
 - All exported functions with locations
@@ -85,16 +81,13 @@ This creates a searchable database of:
 
 ## Customizing Rules
 
-Edit `./claude/hooks/clean-code-rules.json` to adjust thresholds:
+Edit the validation constants in `hooks/validators.py` to adjust thresholds:
 
-```json
-{
-  "rules": {
-    "maxFunctionLines": 20,  // Adjust function size limit
-    "maxFileLines": 100,     // Adjust file size limit
-    "similarityThreshold": 0.8  // How similar before warning
-  }
-}
+```python
+# In validators.py
+MAX_FUNCTION_LENGTH = 50  # Adjust function size limit
+MAX_FILE_LENGTH = 300     # Adjust file size limit
+MAX_NESTING_DEPTH = 4     # Adjust nesting limit
 ```
 
 ## Best Practices
@@ -109,23 +102,20 @@ Edit `./claude/hooks/clean-code-rules.json` to adjust thresholds:
 ## Quick Commands
 
 ```bash
-# Build/rebuild the code index
-./claude/hooks/build-code-index.sh
+# Test the validator manually
+echo '{"tool_name": "Edit", "file_path": "test.py"}' | python3 .claude/hooks/universal-post-tool.py
 
-# Look up a function quickly
-./claude/hooks/lookup-function.sh formatDate
-
-# Check similarity of code snippet
-echo "function debounce(fn, delay) {}" | ./claude/hooks/code-similarity-check.sh -
+# Run the installer to update hooks
+python3 install-hooks.py
 ```
 
 ## Troubleshooting
 
 ### Hooks not triggering
-Ensure your `./claude/settings.json` includes the hook configuration.
+Ensure your `.claude/settings.json` includes the hook configuration. Run `python3 install-hooks.py` to set up.
 
 ### Too many false positives
-Adjust thresholds in `clean-code-rules.json`.
+Adjust thresholds in `hooks/validators.py`.
 
 ### Index out of date
 Run the indexer more frequently or add it to a cron job.
