@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node lib/commands/universal-hook.js"
+            "command": "bash hooks/portable-quality-validator.sh"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node lib/hooks/pre-write-analyzer.js"
+            "command": "bash hooks/pre-tool-hook.sh"
           }
         ]
       }
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node lib/commands/universal-hook.js"
+            "command": "bash hooks/portable-quality-validator.sh"
           }
         ]
       }
