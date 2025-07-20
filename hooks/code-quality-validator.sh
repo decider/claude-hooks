@@ -23,10 +23,40 @@ NC='\033[0m'
 # Configuration
 RULES_FILE="${CLAUDE_RULES_FILE:-$SCRIPT_DIR/clean-code-rules.json}"
 
-# Only proceed if:
-# 1. Tool is Write, Edit, or MultiEdit
-# 2. Exit code is 0 (successful operation)
-# 3. File path is provided
+# Check if this is a Stop event (no tool)
+EVENT_TYPE=$(echo "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null)
+
+if [[ "$EVENT_TYPE" == "Stop" ]]; then
+    # For Stop events, check recently modified files
+    echo -e "${CYAN}🔍 Running code quality checks on recently modified files...${NC}"
+    
+    # Find files modified in the last 5 minutes
+    RECENT_FILES=$(find . -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" | \
+                   xargs -I {} sh -c 'test -f "{}" && echo "{}"' | \
+                   xargs ls -lt 2>/dev/null | head -10 | awk '{print $NF}')
+    
+    TOTAL_VIOLATIONS=0
+    for file in $RECENT_FILES; do
+        if [[ -f "$file" ]] && [[ ! "$file" =~ (test|spec)\. ]]; then
+            echo -e "\nChecking: $file"
+            if ! run_all_quality_checks "$file" "$RULES_FILE"; then
+                TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + $?))
+            fi
+        fi
+    done
+    
+    if [[ $TOTAL_VIOLATIONS -eq 0 ]]; then
+        echo -e "\n${GREEN}✅ All code quality checks passed${NC}"
+    else
+        echo -e "\n${RED}❌ Found $TOTAL_VIOLATIONS total code quality violation(s)${NC}"
+        echo -e "${YELLOW}💡 Consider refactoring to improve code quality${NC}"
+    fi
+    
+    echo '{"continue": true}'
+    exit 0
+fi
+
+# For tool events, check specific file
 if [[ ! "$TOOL" =~ ^(Write|Edit|MultiEdit)$ ]] || [[ "$EXIT_CODE" != "0" ]] || [[ -z "$FILE_PATH" ]] || [[ "$FILE_PATH" == "null" ]]; then
     echo '{"continue": true}'
     exit 0
