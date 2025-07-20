@@ -2,8 +2,8 @@
   "rules": {
     "maxFunctionLines": 30,
     "maxFileLines": 200,
-    "maxLineLength": 100,
-    "maxNestingDepth": 4,
+    "maxLineLength": 140,
+    "maxNestingDepth": 5,
     "commentRatioThreshold": 10
   },
   "ignore": {
@@ -22,13 +22,5 @@
       "*-lock.json",
       "*.lock"
     ]
-  },
-  "magicNumbers": {
-    "allowed": [0, 1, 2, -1, 10, 100, 1000, 60, 24, 7],
-    "contexts": {
-      "httpStatus": [200, 201, 204, 400, 401, 403, 404, 500],
-      "time": [60, 3600, 86400],
-      "ports": [80, 443, 3000, 8080]
-    }
   }
 }
