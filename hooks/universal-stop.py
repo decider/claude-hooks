@@ -24,13 +24,13 @@ def run_hook(hook_script, input_data):
         
         # If exit code 2, that means block
         if result.returncode == 2:
-            return {"action": "block", "message": result.stderr.strip()}
+            return {"decision": "block", "reason": result.stderr.strip()}
         
         if result.stdout:
             return json.loads(result.stdout.strip())
-        return {"action": "continue"}
+        return {}  # No decision means continue
     except:
-        return {"action": "continue"}
+        return {}  # No decision means continue
 
 def main():
     """Main dispatcher entry point."""
@@ -58,12 +58,11 @@ def main():
     
     # If any hook wants to block, respect that
     for response in responses:
-        if response.get('action') == 'block':
+        if response.get('decision') == 'block':
             print(json.dumps(response))
             return
     
-    # Otherwise continue
-    print(json.dumps({"action": "continue"}))
+    # Otherwise continue (no output needed for continue)
 
 if __name__ == '__main__':
     main()

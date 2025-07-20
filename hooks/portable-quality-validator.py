@@ -1,120 +1,18 @@
 #!/usr/bin/env python3
-"""Portable code quality validator - no external dependencies."""
+"""Portable code quality validator - main handler."""
 
 import json
 import sys
 import os
-import re
-from pathlib import Path
-
-# Configuration
-CONFIG = {
-    'max_function_length': 30,
-    'max_file_length': 200,
-    'max_line_length': 100,
-    'max_nesting_depth': 4,
-    'python_max_nesting': 3,
-    'ruby_max_nesting': 3,
-}
-
-def get_file_type(filepath):
-    """Determine file type from extension."""
-    ext = Path(filepath).suffix.lower()
-    return {
-        '.ts': 'typescript', '.tsx': 'typescript',
-        '.js': 'javascript', '.jsx': 'javascript',
-        '.py': 'python', '.rb': 'ruby',
-        '.rs': 'rust', '.go': 'go',
-    }.get(ext, 'unknown')
-
-def check_function_length(lines, file_type):
-    """Check for functions that are too long."""
-    violations = []
-    in_function = False
-    function_start = 0
-    function_name = ""
-    brace_count = 0
-    
-    for i, line in enumerate(lines, 1):
-        # JavaScript/TypeScript function detection
-        if file_type in ['typescript', 'javascript']:
-            pattern = r'^\s*(function|const|let|var|export|async)\s+(\w+)\s*(\(|=.*\(|=.*async.*\()'
-            match = re.match(pattern, line)
-            if match and not in_function:
-                in_function = True
-                function_start = i
-                function_name = match.group(2)
-                brace_count = line.count('{') - line.count('}')
-            
-            if in_function:
-                brace_count += line.count('{') - line.count('}')
-                if brace_count == 0 and '{' in line:
-                    length = i - function_start + 1
-                    if length > CONFIG['max_function_length']:
-                        msg = f"Function '{function_name}' is {length} lines"
-                        violations.append(f"{msg} long (max: {CONFIG['max_function_length']})")
-                    in_function = False
-        
-        # Python function detection
-        elif file_type == 'python':
-            if re.match(r'^\s*def\s+\w+\s*\(', line) or re.match(r'^\s*async\s+def\s+\w+\s*\(', line):
-                if in_function and function_name:
-                    length = i - function_start
-                    if length > CONFIG['max_function_length']:
-                        msg = f"Function '{function_name}' is {length} lines"
-                        violations.append(f"{msg} long (max: {CONFIG['max_function_length']})")
-                match = re.match(r'^\s*(?:async\s+)?def\s+(\w+)', line)
-                function_name = match.group(1) if match else "unknown"
-                function_start = i
-                in_function = True
-    
-    # Handle function at end of file
-    if in_function and function_name and file_type == 'python':
-        length = len(lines) - function_start + 1
-        if length > CONFIG['max_function_length']:
-            msg = f"Function '{function_name}' is {length} lines"
-            violations.append(f"{msg} long (max: {CONFIG['max_function_length']})")
-    
-    return violations
-
-def check_file_length(lines):
-    """Check if file is too long."""
-    if len(lines) > CONFIG['max_file_length']:
-        return [f"File is {len(lines)} lines long (max: {CONFIG['max_file_length']})"]
-    return []
-
-def check_line_length(lines):
-    """Check for lines that are too long."""
-    violations = []
-    for i, line in enumerate(lines, 1):
-        length = len(line.rstrip())
-        if length > CONFIG['max_line_length']:
-            msg = f"Line {i} is {length} characters long"
-            violations.append(f"{msg} (max: {CONFIG['max_line_length']})")
-    return violations
-
-def check_nesting_depth(lines, file_type):
-    """Check for excessive nesting depth."""
-    violations = []
-    max_nesting = CONFIG.get(f'{file_type}_max_nesting', CONFIG['max_nesting_depth'])
-    
-    for i, line in enumerate(lines, 1):
-        if not line.strip():
-            continue
-            
-        # Count leading spaces/tabs
-        indent_level = len(line) - len(line.lstrip())
-        if '\t' in line[:indent_level]:
-            indent_level = line[:indent_level].count('\t') * 4 + line[:indent_level].count(' ')
-        
-        # Estimate nesting based on indentation
-        nesting = indent_level // 4 if file_type == 'python' else indent_level // 2
-        
-        if nesting > max_nesting:
-            msg = f"Line {i} has nesting depth of {nesting}"
-            violations.append(f"{msg} (max: {max_nesting})")
-    
-    return violations
+import glob
+from validators import (
+    get_file_type,
+    check_file_length,
+    check_line_length,
+    check_function_length,
+    check_nesting_depth,
+    get_fix_instruction
+)
 
 def validate_file(filepath):
     """Validate a single file."""
@@ -155,24 +53,101 @@ def handle_post_tool_use(data):
             print(f"\n⚠️  WARNING: Code quality issues in {filepath}:", file=sys.stderr)
             for v in violations:
                 print(f"  - {v}", file=sys.stderr)
+                print(f"    → Fix: {get_fix_instruction(v)}", file=sys.stderr)
             print("\n🚨 YOU WILL BE BLOCKED at session end if these aren't fixed!", file=sys.stderr)
-            print("   Fix these issues now to avoid being blocked later.\n", file=sys.stderr)
+            print("   FIX NOW: Address the issues above immediately.\n", file=sys.stderr)
+
+def categorize_violations(violations, filepath):
+    """Categorize violations by type."""
+    result = {
+        'nesting': [],
+        'long_lines': [],
+        'long_functions': [],
+        'long_files': []
+    }
+    
+    for v in violations:
+        if "nesting depth" in v:
+            result['nesting'].append((filepath, v))
+        elif "characters long" in v:
+            result['long_lines'].append((filepath, v))
+        elif "Function" in v and "lines long" in v:
+            result['long_functions'].append((filepath, v))
+        elif "File is" in v and "lines long" in v:
+            result['long_files'].append((filepath, v))
+    
+    return result
+
+def format_violation_group(title, fix_msg, violations):
+    """Format a group of violations."""
+    lines = []
+    lines.append(title)
+    lines.append(f"   Fix: {fix_msg}")
+    for filepath, v in violations:
+        lines.append(f"   - {filepath}: {v}")
+    lines.append("")
+    return lines
 
 def handle_stop_event():
     """Handle Stop event."""
-    import glob
     # Check all Python files recursively
     python_files = glob.glob('**/*.py', recursive=True)
     
-    all_violations = []
+    # Group violations by type
+    all_violations = {
+        'nesting': [],
+        'long_lines': [],
+        'long_functions': [],
+        'long_files': []
+    }
+    
     for filepath in python_files:
         violations = validate_file(filepath)
         if violations:
-            all_violations.extend([f"{filepath}: {v}" for v in violations])
+            cats = categorize_violations(violations, filepath)
+            for key in all_violations:
+                all_violations[key].extend(cats[key])
     
-    if all_violations:
-        msg_lines = ["Code quality issues found at session end:"]
-        msg_lines.extend(f"  - {v}" for v in all_violations)
+    # Check if any violations exist
+    has_violations = any(all_violations.values())
+    
+    if has_violations:
+        msg_lines = ["Code quality issues found:", ""]
+        
+        # Add each violation type
+        if all_violations['nesting']:
+            msg_lines.extend(format_violation_group(
+                "❌ EXCESSIVE NESTING (max: 3)",
+                "Extract nested logic into separate functions "
+                "or use early returns",
+                all_violations['nesting']
+            ))
+        
+        if all_violations['long_lines']:
+            msg_lines.extend(format_violation_group(
+                "❌ LONG LINES (max: 100 chars)",
+                "Break lines using parentheses or line continuation",
+                all_violations['long_lines']
+            ))
+        
+        if all_violations['long_functions']:
+            msg_lines.extend(format_violation_group(
+                "❌ LONG FUNCTIONS (max: 30 lines)",
+                "Split into smaller helper functions. "
+                "Extract logical sections.",
+                all_violations['long_functions']
+            ))
+        
+        if all_violations['long_files']:
+            msg_lines.extend(format_violation_group(
+                "❌ LONG FILES (max: 200 lines)",
+                "Split into multiple modules "
+                "(e.g., validators.py, handlers.py)",
+                all_violations['long_files']
+            ))
+        
+        msg_lines.append("ACTION REQUIRED: Fix all violations above to proceed.")
+        
         print(json.dumps({
             "decision": "block",
             "reason": "\n".join(msg_lines)

@@ -14,14 +14,13 @@ def main():
     try:
         input_data = json.loads(input_text)
     except:
-        # Invalid JSON, continue
-        print(json.dumps({"action": "continue"}))
+        # Invalid JSON, no output means continue
         return
     
     # Only process Stop events
     event_type = input_data.get('hook_event_name', '')
     if event_type != 'Stop':
-        print(json.dumps({"action": "continue"}))
+        # No output means continue
         return
     
     # Forward to the quality validator
@@ -37,20 +36,14 @@ def main():
             text=True
         )
         
-        # If exit code 2, that means block
-        if result.returncode == 2:
-            print(result.stderr.strip(), file=sys.stderr)
-            sys.exit(2)  # Block with same exit code
-        
         # Pass through the validator's output
         if result.stdout:
             print(result.stdout.strip())
-        else:
-            print(json.dumps({"action": "continue"}))
+        # Otherwise no output means continue
             
     except Exception as e:
-        # If validator fails, continue
-        print(json.dumps({"action": "continue"}))
+        # If validator fails, no output means continue
+        pass
 
 if __name__ == '__main__':
     main()
