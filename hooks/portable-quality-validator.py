@@ -46,16 +46,20 @@ def handle_post_tool_use(data):
     tool_input = data.get('tool_input', {})
     filepath = tool_input.get('file_path', '')
     
-    if filepath:
-        violations = validate_file(filepath)
-        if violations:
-            # Provide strong warning but don't block
-            print(f"\n⚠️  WARNING: Code quality issues in {filepath}:", file=sys.stderr)
-            for v in violations:
-                print(f"  - {v}", file=sys.stderr)
-                print(f"    → Fix: {get_fix_instruction(v)}", file=sys.stderr)
-            print("\n🚨 YOU WILL BE BLOCKED at session end if these aren't fixed!", file=sys.stderr)
-            print("   FIX NOW: Address the issues above immediately.\n", file=sys.stderr)
+    if not filepath:
+        return
+        
+    violations = validate_file(filepath)
+    if not violations:
+        return
+        
+    # Provide strong warning but don't block
+    print(f"\n⚠️  WARNING: Code quality issues in {filepath}:", file=sys.stderr)
+    for v in violations:
+        print(f"  - {v}", file=sys.stderr)
+        print(f"    → Fix: {get_fix_instruction(v)}", file=sys.stderr)
+    print("\n🚨 YOU WILL BE BLOCKED at session end if these aren't fixed!", file=sys.stderr)
+    print("   FIX NOW: Address the issues above immediately.\n", file=sys.stderr)
 
 def categorize_violations(violations, filepath):
     """Categorize violations by type."""
@@ -88,12 +92,9 @@ def format_violation_group(title, fix_msg, violations):
     lines.append("")
     return lines
 
-def handle_stop_event():
-    """Handle Stop event."""
-    # Check all Python files recursively
+def collect_all_violations():
+    """Collect and categorize all violations from Python files."""
     python_files = glob.glob('**/*.py', recursive=True)
-    
-    # Group violations by type
     all_violations = {
         'nesting': [],
         'long_lines': [],
@@ -103,54 +104,51 @@ def handle_stop_event():
     
     for filepath in python_files:
         violations = validate_file(filepath)
-        if violations:
-            cats = categorize_violations(violations, filepath)
-            for key in all_violations:
-                all_violations[key].extend(cats[key])
+        if not violations:
+            continue
+            
+        cats = categorize_violations(violations, filepath)
+        for key in all_violations:
+            all_violations[key].extend(cats[key])
     
-    # Check if any violations exist
-    has_violations = any(all_violations.values())
+    return all_violations
+
+def add_violation_sections(msg_lines, all_violations):
+    """Add violation sections to message lines."""
+    violation_configs = [
+        ('nesting', "❌ EXCESSIVE NESTING (max: 3)",
+         "Extract nested logic into separate functions or use early returns"),
+        ('long_lines', "❌ LONG LINES (max: 100 chars)",
+         "Break lines using parentheses or line continuation"),
+        ('long_functions', "❌ LONG FUNCTIONS (max: 30 lines)",
+         "Split into smaller helper functions. Extract logical sections."),
+        ('long_files', "❌ LONG FILES (max: 200 lines)",
+         "Split into multiple modules (e.g., validators.py, handlers.py)")
+    ]
     
-    if has_violations:
-        msg_lines = ["Code quality issues found:", ""]
-        
-        # Add each violation type
-        if all_violations['nesting']:
-            msg_lines.extend(format_violation_group(
-                "❌ EXCESSIVE NESTING (max: 3)",
-                "Extract nested logic into separate functions "
-                "or use early returns",
-                all_violations['nesting']
-            ))
-        
-        if all_violations['long_lines']:
-            msg_lines.extend(format_violation_group(
-                "❌ LONG LINES (max: 100 chars)",
-                "Break lines using parentheses or line continuation",
-                all_violations['long_lines']
-            ))
-        
-        if all_violations['long_functions']:
-            msg_lines.extend(format_violation_group(
-                "❌ LONG FUNCTIONS (max: 30 lines)",
-                "Split into smaller helper functions. "
-                "Extract logical sections.",
-                all_violations['long_functions']
-            ))
-        
-        if all_violations['long_files']:
-            msg_lines.extend(format_violation_group(
-                "❌ LONG FILES (max: 200 lines)",
-                "Split into multiple modules "
-                "(e.g., validators.py, handlers.py)",
-                all_violations['long_files']
-            ))
-        
-        msg_lines.append("ACTION REQUIRED: Fix all violations above to proceed.")
-        
+    for key, title, fix_msg in violation_configs:
+        if not all_violations[key]:
+            continue
+        msg_lines.extend(format_violation_group(
+            title, fix_msg, all_violations[key]
+        ))
+
+def build_violation_message(all_violations):
+    """Build the violation message."""
+    msg_lines = ["Code quality issues found:", ""]
+    add_violation_sections(msg_lines, all_violations)
+    msg_lines.append("ACTION REQUIRED: Fix all violations above to proceed.")
+    return "\n".join(msg_lines)
+
+def handle_stop_event():
+    """Handle Stop event."""
+    all_violations = collect_all_violations()
+    
+    if any(all_violations.values()):
+        message = build_violation_message(all_violations)
         print(json.dumps({
             "decision": "block",
-            "reason": "\n".join(msg_lines)
+            "reason": message
         }))
         sys.exit(0)
 
