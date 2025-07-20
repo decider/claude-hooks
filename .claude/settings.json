@@ -1,35 +1,33 @@
 {
-  "_comment": "Claude Code hooks - simplified entry points (edit .claude/hooks/config.cjs to manage hooks)",
   "hooks": {
-    "PreToolUse": [
+    "Stop": [
       {
-        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
+            "command": "node /Users/danseider/claude-hooks/lib/commands/universal-hook.js"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /Users/danseider/claude-hooks/lib/hooks/pre-write-analyzer.js"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
+            "command": "node /Users/danseider/claude-hooks/lib/commands/universal-hook.js"
           }
         ]
       }
