@@ -3,50 +3,33 @@
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli universal-hook"
+            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli universal-hook"
-          }
-        ]
-      }
-    ],
-    "PreWrite": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx claude-code-hooks-cli universal-hook"
-          }
-        ]
-      }
-    ],
-    "PostWrite": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "npx claude-code-hooks-cli universal-hook"
+            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
           }
         ]
       }
     ],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli universal-hook"
+            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
           }
         ]
       }

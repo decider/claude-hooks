@@ -231,7 +231,33 @@ log_performance "$HOOK_NAME" $START_TIME
 
 if [ $VALIDATION_FAILED -gt 0 ]; then
     log_hook_end "$HOOK_NAME" 2
-    exit 2  # Block the operation
+    
+    # Collect violations for JSON output
+    VIOLATIONS_JSON=""
+    if [ -f "$FILE_PATH" ]; then
+        # Re-run validation to capture output
+        VALIDATION_OUTPUT=$(validate_file "$FILE_PATH" 2>&1)
+        
+        # Extract violations and suggestions
+        VIOLATIONS=""
+        if echo "$VALIDATION_OUTPUT" | grep -q "CLEAN CODE VIOLATIONS"; then
+            VIOLATIONS=$(echo "$VALIDATION_OUTPUT" | sed -n '/CLEAN CODE VIOLATIONS/,/━━━/p' | grep "❌" | sed 's/^[[:space:]]*/• /')
+        fi
+        
+        # Build reason message for Claude
+        REASON="Code quality violations detected in $(basename "$FILE_PATH"). Please fix these issues:\n\n$VIOLATIONS\n\nSuggestions:\n• Extract large functions into smaller, focused functions\n• Reduce nesting by using early returns\n• Use descriptive names instead of comments\n• Extract magic numbers to named constants"
+    fi
+    
+    # Output JSON for Claude Code
+    cat <<EOF
+{
+  "continue": false,
+  "stopReason": "Code quality standards not met - see violations above",
+  "decision": "block",
+  "reason": "$REASON"
+}
+EOF
+    exit 0  # Use exit 0 when outputting JSON
 else
     log_hook_end "$HOOK_NAME" 0
     exit 0

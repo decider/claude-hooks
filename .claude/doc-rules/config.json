@@ -21,5 +21,24 @@
     "*.sol": 0.9,
     "*.move": 0.9,
     "src/contracts/*": 0.95
+  },
+  "evaluations": {
+    "codeQuality": {
+      "enabled": true,
+      "fileTypes": ["*.ts", "*.tsx", "*.js", "*.jsx", "*.rs", "*.py"],
+      "rules": {
+        "maxFunctionLines": 20,
+        "maxFileLines": 100,
+        "maxNestingDepth": 3,
+        "maxParameters": 3,
+        "maxLineLength": 80
+      },
+      "thresholds": {
+        "default": 0.8,
+        "*.sol": 0.95,
+        "*.move": 0.95,
+        "src/contracts/*": 0.95
+      }
+    }
   }
 }

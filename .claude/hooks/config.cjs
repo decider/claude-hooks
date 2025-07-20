@@ -16,6 +16,9 @@ module.exports = {
     'Bash': {
       '^(npm\\s+(install|i|add)|yarn\\s+(add|install))\\s+': ['check-package-age'],
       '^git\\s+commit': ['typescript-check', 'lint-check']
+    },
+    'Write': {
+      '\\.block-test\\.(txt|md)$': ['test-blocker']  // Test hook that always blocks
     }
   },
   
@@ -25,15 +28,7 @@ module.exports = {
   },
   
   // Stop: Runs when Claude finishes a task
-  stop: ['doc-compliance'],
-  
-  // PreWrite: Runs before writing files
-  preWrite: {
-    '\\.test-trigger$': ['self-test']
-  },
-  
-  // PostWrite: Runs after writing files  
-  postWrite: {}
+  stop: ['doc-compliance']
 };
 
 // Advanced usage (optional):

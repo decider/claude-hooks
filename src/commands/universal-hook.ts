@@ -83,8 +83,24 @@ interface NotificationInput extends BaseHookInput {
   message: string;
 }
 
+// UserPromptSubmit event
+interface UserPromptSubmitInput extends BaseHookInput {
+  hook_event_name: 'UserPromptSubmit';
+  prompt: string;
+}
+
 type HookInput = PreToolUseInput | PostToolUseInput | StopInput | SubagentStopInput | 
-                 PreCompactInput | PreWriteInput | PostWriteInput | NotificationInput;
+                 PreCompactInput | PreWriteInput | PostWriteInput | NotificationInput |
+                 UserPromptSubmitInput;
+
+// Hook output JSON structure
+interface HookOutput {
+  continue?: boolean;
+  stopReason?: string;
+  decision?: 'approve' | 'block';
+  reason?: string;
+  suppressOutput?: boolean;
+}
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -98,29 +114,129 @@ async function readStdin(): Promise<string> {
 
 async function executeHook(hookName: string, input: HookInput): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn('npx', ['claude-code-hooks-cli', 'exec', hookName], {
-      stdio: ['pipe', 'inherit', 'inherit']
+    // Direct hook execution - find and run the script directly
+    const hookPath = path.join(process.cwd(), 'hooks', `${hookName}.sh`);
+    
+    console.error(`[UNIVERSAL-HOOK] Executing hook: ${hookName}`);
+    console.error(`[UNIVERSAL-HOOK] Direct path: ${hookPath}`);
+    
+    // Check if hook file exists
+    if (!fs.existsSync(hookPath)) {
+      console.error(`[UNIVERSAL-HOOK] Hook file not found: ${hookPath}`);
+      resolve(); // Don't fail if hook doesn't exist
+      return;
+    }
+    
+    const child = spawn('bash', [hookPath], {
+      stdio: ['pipe', 'pipe', 'inherit']  // Capture stdout
+    });
+    
+    let stdout = '';
+    
+    // Capture stdout
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
     });
     
     child.stdin.write(JSON.stringify(input));
     child.stdin.end();
     
     child.on('close', (code) => {
+      console.error(`[UNIVERSAL-HOOK] Hook '${hookName}' completed with exit code: ${code}`);
+      
+      // Try to parse stdout as JSON for hook output
+      if (stdout.trim()) {
+        try {
+          const output: HookOutput = JSON.parse(stdout.trim());
+          
+          console.error(`[UNIVERSAL-HOOK] Hook output: ${JSON.stringify(output)}`);
+          
+          // Handle continue: false
+          if (output.continue === false) {
+            // Output stopReason to stderr for Claude to see
+            if (output.stopReason) {
+              console.error(`Hook stopped execution: ${output.stopReason}`);
+            }
+            // Exit with code 2 to indicate blocking
+            console.error(`[UNIVERSAL-HOOK] Hook blocking execution - exiting with code 2`);
+            process.exit(2);
+          }
+          
+          // Handle decision: block for appropriate events
+          if (output.decision === 'block' && output.reason) {
+            console.error(output.reason);
+            console.error(`[UNIVERSAL-HOOK] Hook blocking execution - exiting with code 2`);
+            process.exit(2);
+          }
+          
+          // If suppressOutput is not true, write stdout to console
+          if (!output.suppressOutput) {
+            console.log(stdout);
+          }
+        } catch (e) {
+          // Not JSON, treat as regular output
+          console.log(stdout);
+          console.error(`[UNIVERSAL-HOOK] Hook output not JSON, treating as regular output`);
+        }
+      }
+      
       if (code === 0) {
         resolve();
+      } else if (code === 2) {
+        // Exit code 2 is blocking, propagate it
+        console.error(`[UNIVERSAL-HOOK] Hook returned exit code 2 - blocking execution`);
+        process.exit(2);
       } else {
+        console.error(`[UNIVERSAL-HOOK] Hook failed with exit code ${code}`);
         reject(new Error(`Hook ${hookName} exited with code ${code}`));
       }
+    });
+    
+    child.on('error', (err) => {
+      console.error(`[UNIVERSAL-HOOK] Hook execution error: ${err.message}`);
+      reject(err);
     });
   });
 }
 
 export async function universalHook(): Promise<void> {
+  // ALWAYS log to prove we're running
+  const logFile = path.join(process.cwd(), '.claude', 'hooks', 'execution.log');
+  const timestamp = new Date().toISOString();
+  try {
+    fs.appendFileSync(logFile, `\n[${timestamp}] UNIVERSAL-HOOK STARTED\n`);
+  } catch (e) {
+    // Ignore logging errors
+  }
+  
+  // Also log to stderr so we can see it
+  console.error(`[UNIVERSAL-HOOK] Started at ${timestamp}`);
+  
   try {
     // Read input from Claude
     const inputStr = await readStdin();
+    try {
+      fs.appendFileSync(logFile, `[${timestamp}] Input received: ${inputStr.substring(0, 200)}\n`);
+    } catch (e) {
+      // Ignore
+    }
+    
     const input: HookInput = JSON.parse(inputStr);
     const eventType = input.hook_event_name;
+    
+    // ALWAYS log the event type
+    console.error(`[UNIVERSAL-HOOK] Event: ${eventType}`);
+    try {
+      fs.appendFileSync(logFile, `[${timestamp}] Event type: ${eventType}\n`);
+    } catch (e) {
+      // Ignore
+    }
+    
+    // Debug logging
+    if (process.env.HOOK_DEBUG) {
+      console.error(`[HOOK DEBUG] Event: ${eventType}`);
+      console.error(`[HOOK DEBUG] Input: ${JSON.stringify(input, null, 2)}`);
+    }
     
     // Determine config path - try .cjs first, then .js
     let configPath = path.join(process.cwd(), '.claude', 'hooks', 'config.cjs');
@@ -137,7 +253,7 @@ export async function universalHook(): Promise<void> {
     const config = await import(`${configUrl}?t=${Date.now()}`).then(m => m.default || m);
     
     // Convert event name from PascalCase to camelCase for config lookup
-    const configKey = eventType.charAt(0).toLowerCase() + eventType.slice(1);
+    const configKey = eventType ? eventType.charAt(0).toLowerCase() + eventType.slice(1) : '';
     const eventConfig = config[configKey];
     if (!eventConfig) {
       return;
@@ -155,11 +271,22 @@ export async function universalHook(): Promise<void> {
           if (Array.isArray(toolConfig)) {
             hooks.push(...toolConfig);
           } else {
-            // Pattern matching for commands
-            const command = input.tool_input?.command || '';
-            for (const [pattern, hookList] of Object.entries(toolConfig)) {
-              if (new RegExp(pattern).test(command)) {
-                hooks.push(...(hookList as string[]));
+            // Pattern matching for tool input
+            if (input.tool_name === 'Write' || input.tool_name === 'Edit' || input.tool_name === 'MultiEdit') {
+              // For file operations, match against file_path
+              const filePath = input.tool_input?.file_path || '';
+              for (const [pattern, hookList] of Object.entries(toolConfig)) {
+                if (new RegExp(pattern).test(filePath)) {
+                  hooks.push(...(hookList as string[]));
+                }
+              }
+            } else {
+              // For other tools like Bash, match against command
+              const command = input.tool_input?.command || '';
+              for (const [pattern, hookList] of Object.entries(toolConfig)) {
+                if (new RegExp(pattern).test(command)) {
+                  hooks.push(...(hookList as string[]));
+                }
               }
             }
           }
@@ -180,7 +307,14 @@ export async function universalHook(): Promise<void> {
     }
     
     // Execute all matched hooks
+    if (process.env.HOOK_DEBUG) {
+      console.error(`[HOOK DEBUG] Matched ${hooks.length} hooks: ${hooks.join(', ')}`);
+    }
+    
     for (const hook of hooks) {
+      if (process.env.HOOK_DEBUG) {
+        console.error(`[HOOK DEBUG] Executing hook: ${hook}`);
+      }
       await executeHook(hook, input);
     }
   } catch (error) {
