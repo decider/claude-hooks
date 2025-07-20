@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "description": "Claude Hooks Configuration - defines hooks that run during Claude Code operations",
+  "hooks": {
+    "pre-tool": [
+      {
+        "id": "pre-write-quality",
+        "script": "pre-tool-hook.py",
+        "tools": ["Write", "Edit", "MultiEdit"],
+        "priority": 90,
+        "description": "Provides code quality suggestions before writing"
+      },
+      {
+        "id": "package-age-check",
+        "script": "check-package-age.py",
+        "tools": ["Bash"],
+        "priority": 100,
+        "description": "Prevents installation of outdated packages",
+        "config": {
+          "max_age_days": 180
+        }
+      }
+    ],
+    "post-tool": [
+      {
+        "id": "code-quality-validator",
+        "script": "post-tool-hook.py",
+        "tools": ["Write", "Edit", "MultiEdit"],
+        "priority": 100,
+        "description": "Validates code quality and provides warnings"
+      }
+    ],
+    "stop": [
+      {
+        "id": "final-quality-check",
+        "script": "stop-hook.py",
+        "priority": 100,
+        "description": "Runs final code quality checks and can block if violations exist"
+      },
+      {
+        "id": "task-completion-notify",
+        "script": "task-completion-notify.py",
+        "priority": 50,
+        "description": "Sends notifications when Claude completes tasks",
+        "config": {
+          "notify_on_stop": true
+        }
+      }
+    ]
+  }
+}

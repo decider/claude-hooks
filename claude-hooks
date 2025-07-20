@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Claude Hooks CLI wrapper - runs from project root."""
+import sys
+import os
+
+# Add hooks directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'hooks'))
+
+# Import and run the CLI
+from claude_hooks_cli import main
+
+if __name__ == '__main__':
+    main()
