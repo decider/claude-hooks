@@ -29,6 +29,26 @@ def all_config_files():
     
     return configs
 
+def create_hook_entry(hook, phase, cfg_path):
+    """Create a single hook entry."""
+    return {
+        "id": hook["id"],
+        "event": phase,
+        "file_patterns": hook.get("file_patterns", ["*"]),
+        "priority": hook.get("priority", 0),
+        "defined_in": str(cfg_path.relative_to(ROOT)),
+        "script": hook.get("script", ""),
+        "disabled": hook.get("disable", False),
+    }
+
+def extract_hooks_from_config(cfg, cfg_path):
+    """Extract all hooks from a configuration file."""
+    hooks = []
+    for phase in ("pre-tool", "post-tool", "stop"):
+        for hook in cfg.get(phase, []):
+            hooks.append(create_hook_entry(hook, phase, cfg_path))
+    return hooks
+
 def gather_all_hooks():
     """Gather all hooks from all config files."""
     hooks = []
@@ -39,17 +59,7 @@ def gather_all_hooks():
         except:
             continue
         
-        for phase in ("pre-tool", "post-tool", "stop"):
-            for hook in cfg.get(phase, []):
-                hooks.append({
-                    "id": hook["id"],
-                    "event": phase,
-                    "file_patterns": hook.get("file_patterns", ["*"]),
-                    "priority": hook.get("priority", 0),
-                    "defined_in": str(cfg_path.relative_to(ROOT)),
-                    "script": hook.get("script", ""),
-                    "disabled": hook.get("disable", False),
-                })
+        hooks.extend(extract_hooks_from_config(cfg, cfg_path))
     
     return hooks
 
@@ -82,23 +92,29 @@ def cmd_list(args):
         
         print(f"{event:12} {priority:4} {hook_id:25} {script:35} {defined_in}{flag}")
 
-def cmd_explain(args):
-    """Explain effective hooks for a specific file."""
-    path = args.file
+def validate_file_path(path):
+    """Validate that the file path exists."""
     abs_path = str((Path(ROOT) / path).resolve())
-    
     if not os.path.exists(abs_path):
         print(f"Error: File not found: {path}")
-        return 1
+        return None
+    return abs_path
+
+def print_hook_details(hook):
+    """Print detailed information for a single hook."""
+    patterns = ", ".join(hook.get("file_patterns", ["*"]))
+    config = hook.get("config", {})
+    config_str = json.dumps(config) if config else "{}"
     
-    cfg = effective_config(abs_path)
-    
-    if args.json:
-        print(json.dumps(cfg, indent=2))
-        return
-    
-    print(f"\nEffective hooks for {path}:\n")
-    
+    print(f"  • {hook['id']}")
+    print(f"    priority: {hook.get('priority', 0)}")
+    print(f"    patterns: {patterns}")
+    print(f"    script:   {hook.get('script', 'N/A')}")
+    if config:
+        print(f"    config:   {config_str}")
+
+def print_phase_hooks(cfg):
+    """Print hooks organized by phase."""
     has_hooks = False
     for phase in ("pre-tool", "post-tool", "stop"):
         phase_hooks = cfg.get(phase, [])
@@ -109,21 +125,27 @@ def cmd_explain(args):
         print(f"[{phase}]")
         
         # Sort by priority
-        for h in sorted(phase_hooks, key=lambda h: -h.get("priority", 0)):
-            patterns = ", ".join(h.get("file_patterns", ["*"]))
-            config = h.get("config", {})
-            config_str = json.dumps(config) if config else "{}"
-            
-            print(f"  • {h['id']}")
-            print(f"    priority: {h.get('priority', 0)}")
-            print(f"    patterns: {patterns}")
-            print(f"    script:   {h.get('script', 'N/A')}")
-            if config:
-                print(f"    config:   {config_str}")
+        for hook in sorted(phase_hooks, key=lambda h: -h.get("priority", 0)):
+            print_hook_details(hook)
         print()
     
     if not has_hooks:
         print("No hooks configured for this file.")
+
+def cmd_explain(args):
+    """Explain effective hooks for a specific file."""
+    abs_path = validate_file_path(args.file)
+    if not abs_path:
+        return 1
+    
+    cfg = effective_config(abs_path)
+    
+    if args.json:
+        print(json.dumps(cfg, indent=2))
+        return
+    
+    print(f"\nEffective hooks for {args.file}:\n")
+    print_phase_hooks(cfg)
 
 def main():
     """Main CLI entry point."""

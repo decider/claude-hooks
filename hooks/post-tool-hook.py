@@ -1,77 +1,42 @@
 #!/usr/bin/env python3
-"""Direct PostToolUse Hook Handler.
-
-Processes PostToolUse events for Write/Edit/MultiEdit operations.
-"""
-
 import json
 import sys
 import subprocess
-import os
 
-def print_continue():
-    """Print continue action."""
-    print(json.dumps({"action": "continue"}))
-
-def parse_input():
-    """Parse input from stdin."""
+def main():
     input_text = sys.stdin.read()
     try:
         input_data = json.loads(input_text)
-        return input_text, input_data
     except:
-        return None, None
-
-def should_process(input_data):
-    """Check if we should process this event."""
-    if not input_data:
-        return False
+        return
+    
+    if not _should_validate(input_data):
+        return
         
-    hook_event = input_data.get('hook_event_name', '')
-    if hook_event != 'PostToolUse':
-        return False
-    
-    tool_name = input_data.get('tool_name', '')
-    if tool_name not in ['Write', 'Edit', 'MultiEdit']:
-        return False
-    
-    tool_input = input_data.get('tool_input', {})
-    file_path = tool_input.get('file_path', '')
-    if not file_path or file_path == 'null':
-        return False
+    file_path = input_data.get('tool_input', {}).get('file_path', '')
+    if not (file_path and file_path.endswith('.py')):
+        return
         
-    return True
+    _run_validator(input_text)
 
-def run_validator(input_text):
-    """Run the quality validator."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    validator_path = os.path.join(script_dir, 'portable-quality-validator.py')
-    
+def _should_validate(input_data):
+    """Check if we should run validation for this tool use."""
+    return (input_data.get('hook_event_name') == 'PostToolUse' and 
+            input_data.get('tool_name') in ['Write', 'Edit', 'MultiEdit'])
+
+def _run_validator(input_text):
+    """Run the quality validator on the input."""
     try:
         result = subprocess.run(
-            ['python3', validator_path],
+            ['python3', 'portable-quality-validator.py'],
             input=input_text,
             capture_output=True,
             text=True
         )
-        return result.stdout
+        if result.stdout:
+            print(result.stdout.strip())
     except:
-        return None
-
-def main():
-    """Main entry point."""
-    input_text, input_data = parse_input()
-    
-    if not should_process(input_data):
-        print_continue()
-        return
-    
-    validator_output = run_validator(input_text)
-    
-    if validator_output:
-        print(validator_output.strip())
-    else:
-        print_continue()
+        pass
 
 if __name__ == '__main__':
     main()
