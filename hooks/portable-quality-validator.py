@@ -162,7 +162,8 @@ def handle_post_tool_use(data):
 def handle_stop_event():
     """Handle Stop event."""
     import glob
-    python_files = glob.glob('*.py')
+    # Check all Python files recursively
+    python_files = glob.glob('**/*.py', recursive=True)
     
     all_violations = []
     for filepath in python_files:

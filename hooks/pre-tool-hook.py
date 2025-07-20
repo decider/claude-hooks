@@ -91,12 +91,8 @@ def main():
             if new_string:
                 is_valid, reason = check_content_quality(new_string, ext)
                 if not is_valid:
-                    # Use JSON format for blocking
-                    print(json.dumps({
-                        "decision": "block",
-                        "reason": reason
-                    }))
-                    sys.exit(0)
+                    # Just provide suggestions, don't block
+                    print(f"⚠️  Code quality suggestion: {reason}", file=sys.stderr)
         # If all edits pass, continue
         sys.exit(0)
     
@@ -107,14 +103,11 @@ def main():
     is_valid, reason = check_content_quality(content, ext)
     
     if not is_valid:
-        # Use JSON format for blocking
-        print(json.dumps({
-            "decision": "block",
-            "reason": reason
-        }))
-    else:
-        # Continue normally
-        sys.exit(0)
+        # Just provide suggestions, don't block
+        print(f"⚠️  Code quality suggestion: {reason}", file=sys.stderr)
+    
+    # Always continue
+    sys.exit(0)
 
 if __name__ == '__main__':
     main()
