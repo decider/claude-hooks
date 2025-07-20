@@ -47,12 +47,27 @@ if [[ "$EVENT_TYPE" == "Stop" ]]; then
     
     if [[ $TOTAL_VIOLATIONS -eq 0 ]]; then
         echo -e "\n${GREEN}✅ All code quality checks passed${NC}"
+        echo '{"continue": true}'
     else
         echo -e "\n${RED}❌ Found $TOTAL_VIOLATIONS total code quality violation(s)${NC}"
         echo -e "${YELLOW}💡 Consider refactoring to improve code quality${NC}"
+        
+        # Block if violations exceed threshold
+        BLOCK_THRESHOLD="${CODE_QUALITY_BLOCK_THRESHOLD:-999}"  # Default: never block
+        
+        if [[ $TOTAL_VIOLATIONS -gt $BLOCK_THRESHOLD ]]; then
+            cat <<EOF
+{
+  "continue": false,
+  "stopReason": "Code quality violations in recent files",
+  "decision": "block",
+  "reason": "Found $TOTAL_VIOLATIONS total code quality violations across recent files (threshold: $BLOCK_THRESHOLD).\n\nClean code principles violated:\n- Functions too long\n- Deep nesting\n- Magic numbers\n- High comment ratio\n\nPlease refactor before proceeding."
+}
+EOF
+        else
+            echo '{"continue": true}'
+        fi
     fi
-    
-    echo '{"continue": true}'
     exit 0
 fi
 
@@ -86,7 +101,20 @@ else
     echo -e "\n${RED}❌ Found $VIOLATIONS code quality violation(s)${NC}"
     echo -e "${YELLOW}💡 Consider refactoring to improve code quality${NC}"
     
-    # Still allow continuation but warn
-    echo '{"continue": true}'
+    # Block if violations exceed threshold (configurable)
+    BLOCK_THRESHOLD="${CODE_QUALITY_BLOCK_THRESHOLD:-999}"  # Default: never block
+    
+    if [[ $VIOLATIONS -gt $BLOCK_THRESHOLD ]]; then
+        cat <<EOF
+{
+  "continue": false,
+  "stopReason": "Code quality violations exceed threshold",
+  "decision": "block",
+  "reason": "Found $VIOLATIONS code quality violations (threshold: $BLOCK_THRESHOLD).\n\nPlease fix:\n- Functions exceeding max length\n- Deep nesting levels\n- Magic numbers\n- Other clean code violations\n\nRun code quality checks locally to see all issues."
+}
+EOF
+    else
+        echo '{"continue": true}'
+    fi
     exit 0
 fi
