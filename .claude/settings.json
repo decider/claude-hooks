@@ -5,29 +5,27 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash hooks/portable-quality-validator.sh"
+            "command": "python3 hooks/universal-stop.py"
           }
         ]
       }
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash hooks/pre-tool-hook.sh"
+            "command": "python3 hooks/universal-pre-tool.py"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "bash hooks/portable-quality-validator.sh"
+            "command": "python3 hooks/universal-post-tool.py"
           }
         ]
       }
