@@ -1,0 +1,14 @@
+{
+  "_comment": "Example: Root-level overrides for the examples directory",
+  "_comment2": "This inherits from .claude/hooks.json and adds specific rules",
+  "pre-tool": [
+    {
+      "id": "code-quality-validator",
+      "config": {
+        "max_function_length": 30,
+        "max_line_length": 80,
+        "max_nesting_depth": 3
+      }
+    }
+  ]
+}

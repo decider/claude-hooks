@@ -62,3 +62,11 @@ proof-*.ts
 bad-*.ts
 trigger-*.ts
 *-blocker.ts
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so

@@ -18,8 +18,9 @@ from package_utils import (
     parse_hook_input
 )
 
-# Configuration
-MAX_AGE_DAYS = int(os.environ.get('MAX_AGE_DAYS', '180'))  # Default: 6 months
+# Get configuration from environment
+CONFIG = json.loads(os.getenv("CLAUDE_HOOK_CONFIG", "{}"))
+MAX_AGE_DAYS = int(CONFIG.get('max_age_days', os.environ.get('MAX_AGE_DAYS', '180')))
 TEST_MODE = os.environ.get('CLAUDE_HOOKS_TEST_MODE', '0') == '1'
 
 def handle_test_mode(package_spec):

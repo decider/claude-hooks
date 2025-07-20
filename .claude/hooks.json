@@ -1,25 +1,38 @@
 {
-  "example-project-hook": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^echo\\s+test",
-    "description": "Example project-specific hook for demonstration",
-    "command": "echo 'This is an example project hook!'"
-  },
-  "custom-commit-check": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^git\\s+commit",
-    "description": "Custom commit validation for this project",
-    "command": "./scripts/validate-commit.sh"
-  },
-  "doc-compliance": {
-    "event": "PreToolUse",
-    "matcher": "Bash",
-    "pattern": "^stop$",
-    "description": "Check code changes against documentation standards when stopping",
-    "command": "./.claude/hooks/doc-compliance.sh",
-    "requiresApiKey": true,
-    "apiKeyType": "gemini"
-  }
+  "pre-tool": [
+    {
+      "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py",
+      "file_patterns": ["*.py"],
+      "config": {
+        "max_function_length": 50,
+        "max_line_length": 120,
+        "max_nesting_depth": 4
+      }
+    }
+  ],
+  "post-tool": [
+    {
+      "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py", 
+      "file_patterns": ["*.py"],
+      "config": {
+        "max_function_length": 50,
+        "max_line_length": 120,
+        "max_nesting_depth": 4
+      }
+    }
+  ],
+  "stop": [
+    {
+      "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py",
+      "file_patterns": ["*.py"],
+      "config": {
+        "max_function_length": 50,
+        "max_line_length": 120,
+        "max_nesting_depth": 4
+      }
+    }
+  ]
 }

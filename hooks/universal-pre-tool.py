@@ -1,62 +1,87 @@
 #!/usr/bin/env python3
-"""Universal PreToolUse dispatcher - routes to appropriate hooks based on tool type."""
+"""Universal PreToolUse dispatcher using hierarchical config."""
 
-import json
 import sys
-import subprocess
+import json
 import os
+import subprocess
+from config_loader import get_hooks_for_phase
 
-def run_hook(hook_script, input_data):
-    """Run a hook script and return its response."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    hook_path = os.path.join(script_dir, hook_script)
+def run_hook(hook, ctx):
+    """Run a single hook script with config passed via env."""
+    # Skip hooks without script field (built-ins)
+    if "script" not in hook:
+        return None
     
-    if not os.path.exists(hook_path):
-        return {"action": "continue"}
+    script_path = hook["script"]
+    
+    # Handle relative paths
+    if not os.path.isabs(script_path):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(script_dir, "..", script_path)
+    
+    if not os.path.exists(script_path):
+        return None
+    
+    # Set up environment with hook config
+    env = os.environ.copy()
+    env["CLAUDE_HOOK_CONFIG"] = json.dumps(hook.get("config", {}))
     
     try:
         result = subprocess.run(
-            ['python3', hook_path],
-            input=json.dumps(input_data),
+            ["python3", script_path],
+            input=json.dumps(ctx).encode(),
+            env=env,
             capture_output=True,
-            text=True
+            text=True,
         )
         
-        # If exit code 2, that means block
+        # Handle official Claude Code hook exit codes
         if result.returncode == 2:
-            return {"action": "block", "message": result.stderr.strip()}
+            # Exit code 2 means block - stderr goes to Claude
+            print(result.stderr.strip(), file=sys.stderr)
+            sys.exit(2)
+        elif result.returncode != 0:
+            # Other non-zero exit codes are non-blocking errors - stderr shown to user
+            print(result.stderr.strip(), file=sys.stderr)
+            sys.exit(result.returncode)
         
-        if result.stdout:
-            return json.loads(result.stdout.strip())
-        return {"action": "continue"}
-    except:
-        return {"action": "continue"}
+        # Exit code 0 - pass through stdout (including JSON)
+        if result.stdout.strip():
+            print(result.stdout.strip())
+            sys.exit(0)
+        
+        return None
+    except Exception as e:
+        # On error, continue rather than block
+        return None
 
 def main():
     """Main dispatcher entry point."""
     # Read input from stdin
     try:
-        input_data = json.loads(sys.stdin.read())
+        ctx = json.loads(sys.stdin.read())
     except:
-        print(json.dumps({"action": "continue"}))
-        return
+        sys.exit(0)
     
-    # Get tool name
-    tool_name = input_data.get('tool_name', '')
+    # Get file path from tool input
+    tool_input = ctx.get("tool_input", {})
+    file_path = tool_input.get("file_path")
     
-    # Route based on tool type
-    if tool_name in ['Write', 'Edit', 'MultiEdit']:
-        # Run pre-write validation
-        response = run_hook('pre-tool-hook.py', input_data)
-    elif tool_name == 'Bash':
-        # Check for package installations
-        response = run_hook('check-package-age.py', input_data)
-    else:
-        # No hooks for other tools
-        response = {"action": "continue"}
+    if not file_path:
+        # No file path, no hooks to run
+        sys.exit(0)
     
-    # Output response
-    print(json.dumps(response))
+    # Get all pre-tool hooks for this file
+    hooks = get_hooks_for_phase(file_path, "pre-tool")
+    
+    # Run hooks in priority order
+    for hook in hooks:
+        run_hook(hook, ctx)
+        # run_hook will exit directly if blocking, so if we get here it's continue
+    
+    # All hooks passed
+    sys.exit(0)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

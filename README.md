@@ -13,6 +13,8 @@ Claude Code Hooks allows you to set up automatic validation, quality checks, and
 - 📦 **Package Age Checking** - Prevents installation of outdated packages
 - 🔔 **Task Completion Notifications** - Get notified when Claude finishes tasks
 - 🎯 **Easy Installation** - One command setup
+- 🏗️ **Hierarchical Configuration** - Different rules for different directories
+- 🔍 **Hook Introspection** - See which hooks apply to any file
 
 ## Installation
 
@@ -61,6 +63,36 @@ Sends notifications when Claude completes tasks:
 - Linux desktop notifications
 
 ## Configuration
+
+### Hierarchical Configuration
+
+The hook system supports directory-specific configurations:
+
+1. **Root Config**: `.claude/hooks.json` - Default settings for all files
+2. **Directory Overrides**: `.claude-hooks.json` files in any directory
+3. **Config Inheritance**: Child directories inherit and can override parent settings
+
+Example structure:
+```
+project/
+├── .claude/
+│   └── hooks.json          # Root configuration
+├── backend/
+│   └── .claude-hooks.json  # Stricter rules for backend
+└── frontend/
+    └── .claude-hooks.json  # Different rules for frontend
+```
+
+#### Hook Introspection
+
+See which hooks apply to your files:
+```bash
+# List all hooks in the project
+python3 hooks/list_hooks.py list
+
+# Show effective hooks for a specific file
+python3 hooks/list_hooks.py explain path/to/file.py
+```
 
 ### Environment Variables
 - `MAX_AGE_DAYS` - Maximum age for packages (default: 180)

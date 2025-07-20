@@ -1,0 +1,26 @@
+{
+  "_comment": "Frontend-specific hook configuration",
+  "_comment2": "React/TypeScript specific rules",
+  "pre-tool": [
+    {
+      "id": "code-quality-validator",
+      "config": {
+        "max_line_length": 120,
+        "max_function_length": 60,
+        "allow_console_log": false
+      }
+    },
+    {
+      "id": "react-linter",
+      "script": "hooks/react_linter.py",
+      "file_patterns": ["*.jsx", "*.tsx"],
+      "priority": 85,
+      "disable": true,
+      "_comment": "Would need to be implemented",
+      "config": {
+        "enforce_hooks_rules": true,
+        "enforce_prop_types": false
+      }
+    }
+  ]
+}
