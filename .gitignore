@@ -54,3 +54,11 @@ CLAUDE.md.backup
 
 # Non-dotted claude directories (legacy)
 claude/
+
+# Test files for hooks
+test-*.ts
+*-test.ts
+proof-*.ts
+bad-*.ts
+trigger-*.ts
+*-blocker.ts

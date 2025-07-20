@@ -1,6 +1,6 @@
 # Claude Code Hooks - Your Hook Manager / CLI
 
-Professional hook management system for Claude Code - TypeScript-based validation, quality checks, and hook management across environments.
+Professional hook management system for Claude Code - TypeScript-based validation, quality checks, and hook management across environments. Now with automatic code quality enforcement!
 
 [![npm version](https://badge.fury.io/js/claude-code-hooks-cli.svg)](https://www.npmjs.com/package/claude-code-hooks-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
