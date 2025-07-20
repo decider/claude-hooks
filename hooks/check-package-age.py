@@ -4,10 +4,17 @@
 import json
 import sys
 import re
-import urllib.request
-import urllib.error
-from datetime import datetime, timedelta
+from datetime import datetime
 import os
+
+from package_utils import (
+    parse_package_spec,
+    is_npm_package,
+    fetch_package_info,
+    get_package_publish_date,
+    get_latest_version_info,
+    extract_packages_from_command
+)
 
 # Configuration
 MAX_AGE_DAYS = int(os.environ.get('MAX_AGE_DAYS', '180'))  # Default: 6 months
@@ -17,27 +24,43 @@ def log_to_stderr(message):
     """Log to stderr for debugging."""
     print(message, file=sys.stderr)
 
-def parse_package_spec(package_spec):
-    """Parse package@version into name and version."""
-    match = re.match(r'^([^@]+)@(.+)$', package_spec)
-    if match:
-        return match.group(1), match.group(2)
-    return package_spec, 'latest'
+def handle_test_mode(package_spec):
+    """Handle test mode logic."""
+    if package_spec not in ['left-pad@1.0.0', 'moment@2.18.0']:
+        return True, None
+    error_msg = f"Package {package_spec} is too old (test mode simulation)."
+    log_to_stderr(error_msg)
+    return False, error_msg
 
-def is_npm_package(package_spec):
-    """Check if this is an npm package (not local/git/etc)."""
-    if re.match(r'^(\.|\/|git\+|http|file:)', package_spec):
-        return False
-    return True
+def build_age_error_message(package_name, version, age_days, package_info):
+    """Build error message for old package."""
+    error_msg = (
+        f"Package {package_name}@{version} is too old "
+        f"(published {age_days} days ago, max allowed: {MAX_AGE_DAYS} days)."
+    )
+    
+    # Add latest version info if available
+    latest_version, latest_age_days = get_latest_version_info(package_info, version)
+    if latest_version and latest_age_days is not None:
+        error_msg += (
+            f" Latest version is {latest_version} "
+            f"({latest_age_days} days old)."
+        )
+    
+    return error_msg
 
-def fetch_package_info(package_name):
-    """Fetch package info from npm registry."""
-    url = f'https://registry.npmjs.org/{package_name}'
-    try:
-        with urllib.request.urlopen(url, timeout=5) as response:
-            return json.loads(response.read().decode('utf-8'))
-    except:
-        return None
+def check_package_validity(package_info, package_name, version):
+    """Check if package info is valid and get publish date."""
+    if not package_info:
+        log_to_stderr(f"Could not fetch info for {package_name}")
+        return None, True  # Allow if we can't verify
+        
+    publish_date = get_package_publish_date(package_info, version)
+    if not publish_date:
+        log_to_stderr(f"No publish time found for {package_name}@{version}")
+        return None, True
+        
+    return publish_date, False
 
 def check_package_age(package_spec):
     """Check if a package is too old."""
@@ -48,128 +71,126 @@ def check_package_age(package_spec):
         return True, None
     
     # Test mode simulation
-    if TEST_MODE and package_spec in ['left-pad@1.0.0', 'moment@2.18.0']:
-        error_msg = f"Package {package_spec} is too old (test mode simulation)."
-        log_to_stderr(error_msg)
-        return False, error_msg
+    if TEST_MODE:
+        return handle_test_mode(package_spec)
     
-    # Fetch package info
-    package_info = fetch_package_info(package_name)
-    if not package_info:
-        log_to_stderr(f"Could not fetch package info for {package_name}, allowing installation")
-        return True, None
-    
-    # Get publish time
     try:
-        if version == 'latest':
-            latest_version = package_info.get('dist-tags', {}).get('latest')
-            if latest_version:
-                publish_time = package_info.get('time', {}).get(latest_version)
-                version = latest_version
-            else:
-                return True, None
-        else:
-            publish_time = package_info.get('time', {}).get(version)
+        package_info = fetch_package_info(package_name)
+        publish_date, should_allow = check_package_validity(
+            package_info, package_name, version
+        )
         
-        if not publish_time:
+        if should_allow:
             return True, None
         
-        # Parse publish date
-        publish_date = datetime.fromisoformat(publish_time.replace('Z', '+00:00'))
+        # Calculate age
         age_days = (datetime.now() - publish_date).days
         
-        if age_days > MAX_AGE_DAYS:
-            # Get latest version info
-            latest_version = package_info.get('dist-tags', {}).get('latest', '')
-            error_msg = f"Package {package_name}@{version} is too old (published {age_days} days ago, max allowed: {MAX_AGE_DAYS} days)."
+        if age_days <= MAX_AGE_DAYS:
+            log_to_stderr(
+                f"Package {package_name}@{version} is {age_days} days old "
+                f"(within {MAX_AGE_DAYS} day limit)"
+            )
+            return True, None
             
-            if latest_version and latest_version != version:
-                latest_time = package_info.get('time', {}).get(latest_version)
-                if latest_time:
-                    latest_date = datetime.fromisoformat(latest_time.replace('Z', '+00:00'))
-                    latest_age_days = (datetime.now() - latest_date).days
-                    error_msg += f" Latest version is {latest_version} ({latest_age_days} days old)."
-            
-            log_to_stderr(error_msg)
-            return False, error_msg
-        
-        log_to_stderr(f"Package {package_name}@{version} is {age_days} days old (within {MAX_AGE_DAYS} day limit)")
-        return True, None
+        # Package is too old
+        error_msg = build_age_error_message(
+            package_name, version, age_days, package_info
+        )
+        log_to_stderr(error_msg)
+        return False, error_msg
         
     except Exception as e:
-        # If we can't parse dates, allow installation
-        return True, None
+        log_to_stderr(f"Error checking {package_name}: {str(e)}")
+        return True, None  # Allow if error
 
-def extract_packages_from_command(command):
-    """Extract package names from npm/yarn commands."""
-    packages = []
+def check_packages_in_command(command):
+    """Check all packages in an npm/yarn command."""
+    packages = extract_packages_from_command(command)
+    if not packages:
+        log_to_stderr("No packages specified, checking package.json")
+        return []
+        
+    failed_packages = []
+    for package in packages:
+        is_allowed, error_msg = check_package_age(package)
+        if not is_allowed:
+            failed_packages.append((package, error_msg))
+            
+    return failed_packages
+
+def block_old_packages(error_messages):
+    """Block installation of old packages."""
+    block_reason = (
+        "One or more packages are too old. Please use newer versions "
+        "or add them to the allowlist if absolutely necessary."
+    )
     
-    # Remove command prefix
-    cmd_without_prefix = re.sub(r'^(npm (install|i)|yarn add)\s*', '', command)
+    if TEST_MODE:
+        log_to_stderr("[TEST MODE] Would have blocked")
+        print(json.dumps({"action": "continue"}))
+    else:
+        print(block_reason + "\n\n" + "\n".join(error_messages), file=sys.stderr)
+        sys.exit(2)  # Exit code 2 blocks the operation
+
+def handle_package_installation(input_data):
+    """Handle package installation commands."""
+    command = input_data.get('tool_input', {}).get('command', '')
+    if not command:
+        return
+        
+    # Check if this is an install command
+    if not re.match(r'(npm|yarn)\s+(install|add|i)', command):
+        return
+        
+    log_to_stderr(f"Checking packages in command: {command}")
     
-    # Split by spaces and filter out flags
-    tokens = cmd_without_prefix.split()
-    for token in tokens:
-        if token and not token.startswith('-'):
-            packages.append(token)
+    # Check packages
+    failed_packages = check_packages_in_command(command)
+    if not failed_packages:
+        return
+        
+    # Block if any packages are too old
+    error_messages = [msg for _, msg in failed_packages if msg]
+    block_old_packages(error_messages)
+
+def handle_package_json_edit(input_data):
+    """Handle package.json edits."""
+    command = input_data.get('tool_input', {}).get('command', '')
+    tool_input = input_data.get('tool_input', {})
+    description = tool_input.get('description', '')
     
-    return packages
+    if 'package.json' in command or 'package.json' in description:
+        log_to_stderr(
+            "Notice: package.json edit detected. "
+            "Ensure dependencies are up to date."
+        )
 
 def main():
     """Main entry point."""
     # Read input from stdin
+    input_text = sys.stdin.read()
+    
     try:
-        input_data = json.loads(sys.stdin.read())
-    except:
-        # Invalid JSON, continue
+        input_data = json.loads(input_text)
+    except json.JSONDecodeError:
+        log_to_stderr("Failed to parse input JSON")
         print(json.dumps({"action": "continue"}))
         return
     
-    # Only process PreToolUse events for Bash tools
-    hook_event = input_data.get('hook_event_name', '')
-    if hook_event != 'PreToolUse':
-        print(json.dumps({"action": "continue"}))
-        return
-    
+    # Get the tool name
     tool_name = input_data.get('tool_name', '')
+    
+    # Only process Bash tool
     if tool_name != 'Bash':
         print(json.dumps({"action": "continue"}))
         return
     
-    command = input_data.get('tool_input', {}).get('command', '')
+    # Handle package installation
+    handle_package_installation(input_data)
     
-    # Check if this is an npm/yarn install command
-    if re.match(r'^npm\s+(install|i)\s+|^yarn\s+add\s+', command):
-        packages = extract_packages_from_command(command)
-        
-        if packages:
-            log_to_stderr(f"Checking {len(packages)} package(s) for age compliance")
-            
-            failed_packages = []
-            error_messages = []
-            
-            for pkg in packages:
-                is_valid, error_msg = check_package_age(pkg)
-                if not is_valid:
-                    failed_packages.append(pkg)
-                    if error_msg:
-                        error_messages.append(error_msg)
-            
-            if failed_packages:
-                block_reason = "One or more packages are too old. Please use newer versions or add them to the allowlist if absolutely necessary."
-                
-                # In test mode, don't actually block
-                if TEST_MODE:
-                    log_to_stderr("[TEST MODE] Would have blocked")
-                    print(json.dumps({"action": "continue"}))
-                else:
-                    print(block_reason + "\n\n" + "\n".join(error_messages), file=sys.stderr)
-                    sys.exit(2)  # Exit code 2 blocks the operation
-                return
-    
-    # Check if editing package.json
-    if 'package.json' in command or 'package.json' in input_data.get('tool_input', {}).get('description', ''):
-        log_to_stderr("Notice: package.json edit detected. Ensure dependencies are up to date.")
+    # Check for package.json edits
+    handle_package_json_edit(input_data)
     
     # Allow the command to proceed
     print(json.dumps({"action": "continue"}))

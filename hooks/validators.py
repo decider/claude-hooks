@@ -48,19 +48,21 @@ def check_js_functions(lines, violations, max_len):
     func_state = {'in_func': False, 'start': 0, 'name': '', 'braces': 0}
     
     for i, line in enumerate(lines, 1):
-        if not func_state['in_func']:
-            match = _is_js_function_start(line)
-            if not match:
-                continue
-            func_state['in_func'] = True
-            func_state['start'] = i
-            func_state['name'] = match.group(2)
-            func_state['braces'] = line.count('{') - line.count('}')
+        # Handle in-function state
+        if func_state['in_func']:
+            if _check_js_function_end(func_state, line, i, violations, max_len):
+                func_state['in_func'] = False
             continue
             
-        # In function - check for end
-        if _check_js_function_end(func_state, line, i, violations, max_len):
-            func_state['in_func'] = False
+        # Check for new function
+        match = _is_js_function_start(line)
+        if not match:
+            continue
+            
+        func_state['in_func'] = True
+        func_state['start'] = i
+        func_state['name'] = match.group(2)
+        func_state['braces'] = line.count('{') - line.count('}')
 
 def _is_py_function_start(line):
     """Check if line starts a Python function."""
@@ -119,13 +121,16 @@ def check_file_length(lines):
 def check_line_length(lines):
     """Check for lines that are too long."""
     violations = []
+    max_len = CONFIG['max_line_length']
+    
     for i, line in enumerate(lines, 1):
         length = len(line.rstrip())
-        if length > CONFIG['max_line_length']:
-            msg = f"Line {i} is {length} characters long"
-            violations.append(
-                f"{msg} (max: {CONFIG['max_line_length']})"
-            )
+        if length <= max_len:
+            continue
+            
+        violations.append(
+            f"Line {i} is {length} characters long (max: {max_len})"
+        )
     return violations
 
 def _calculate_indent_level(line):
@@ -153,10 +158,12 @@ def check_nesting_depth(lines, file_type):
         indent = _calculate_indent_level(line)
         nest = indent // divisor
         
-        if nest > max_nest:
-            violations.append(
-                f"Line {i} has nesting depth of {nest} (max: {max_nest})"
-            )
+        if nest <= max_nest:
+            continue
+            
+        violations.append(
+            f"Line {i} has nesting depth of {nest} (max: {max_nest})"
+        )
     
     return violations
 
