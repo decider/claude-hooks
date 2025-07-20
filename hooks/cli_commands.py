@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 
 from config_loader import HierarchicalConfigLoader
-from cli_utils import (Colors, print_warning, print_success,
-                      print_error)
+from cli_utils import Colors, print_warning, print_success, print_error
 from hook_validator import validate_config_file, find_all_config_files
 
 

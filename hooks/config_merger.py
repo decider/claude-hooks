@@ -23,7 +23,7 @@ def merge_configs(base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, An
     return result
 
 
-def merge_hooks(base_hooks: Dict, overlay_hooks: Dict, 
+def merge_hooks(base_hooks: Dict, overlay_hooks: Dict,
                 exclude_ids: List[str]) -> Dict:
     """Merge hook configurations."""
     result = {}

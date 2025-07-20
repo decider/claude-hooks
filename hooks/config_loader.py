@@ -164,7 +164,7 @@ class HierarchicalConfigLoader:
         
         return result
     
-    def get_hooks_for_file(self, file_path: str, event_type: str, 
+    def get_hooks_for_file(self, file_path: str, event_type: str,
                           tool: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get hooks that apply to a specific file and event."""
         config = self.get_config_for_path(file_path)

@@ -54,7 +54,7 @@ def _parse_json_config(content: str, rel_path: Path, errors: List[str]) -> Dict[
 
 
 def _validate_hooks_structure(hooks: Any, rel_path: Path, errors: List[str],
-                             warnings: List[str], project_root: Path):
+                           warnings: List[str], project_root: Path):
     """Validate the hooks structure."""
     if not isinstance(hooks, dict):
         errors.append(f"{rel_path}: 'hooks' must be an object")
@@ -81,8 +81,8 @@ def _validate_event_type(event_type: str, hook_list: Any, rel_path: Path,
 
 
 def _validate_single_hook(hook: Dict[str, Any], event_type: str, index: int,
-                         rel_path: Path, errors: List[str], warnings: List[str],
-                         project_root: Path):
+                       rel_path: Path, errors: List[str], warnings: List[str],
+                       project_root: Path):
     """Validate a single hook configuration."""
     # Check required fields
     if 'id' not in hook:
