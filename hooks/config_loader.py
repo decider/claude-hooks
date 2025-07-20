@@ -6,9 +6,11 @@ Supports inheritance, file patterns, and directory-based filtering.
 
 import json
 import os
-import fnmatch
 from pathlib import Path
 from typing import Dict, List, Optional, Any
+
+from config_merger import merge_configs
+from hook_filter import filter_hooks_for_file
 
 
 class HierarchicalConfigLoader:
@@ -119,7 +121,7 @@ class HierarchicalConfigLoader:
         if 'extends' in config:
             base_config = self._load_extended_config(config['extends'], config_path)
             if base_config:
-                config = self._merge_configs(base_config, config)
+                config = merge_configs(base_config, config)
         
         self._file_cache[config_path] = config
         return config
@@ -158,66 +160,9 @@ class HierarchicalConfigLoader:
         for config_path in config_paths:
             config = self._load_config_file(config_path)
             if config:
-                result = self._merge_configs(result, config)
+                result = merge_configs(result, config)
         
         return result
-    
-    def _merge_configs(self, base: Dict[str, Any], overlay: Dict[str, Any]) -> Dict[str, Any]:
-        """Merge two configurations, with overlay taking precedence."""
-        result = base.copy()
-        
-        # Simple merge for non-hook fields
-        for key, value in overlay.items():
-            if key not in ['hooks', 'exclude']:
-                result[key] = value
-        
-        # Merge hooks
-        result['hooks'] = self._merge_hooks(
-            base.get('hooks', {}),
-            overlay.get('hooks', {}),
-            overlay.get('exclude', [])
-        )
-        
-        return result
-    
-    def _merge_hooks(self, base_hooks: Dict, overlay_hooks: Dict, 
-                     exclude_ids: List[str]) -> Dict:
-        """Merge hook configurations."""
-        result = {}
-        
-        # Process each event type
-        for event_type in ['pre-tool', 'post-tool', 'stop']:
-            merged = self._merge_hook_list(
-                base_hooks.get(event_type, []),
-                overlay_hooks.get(event_type, []),
-                exclude_ids
-            )
-            if merged:
-                result[event_type] = merged
-        
-        return result
-    
-    def _merge_hook_list(self, base_list: List[Dict], overlay_list: List[Dict],
-                         exclude_ids: List[str]) -> List[Dict]:
-        """Merge two lists of hooks."""
-        # Create lookup for overlay hooks
-        overlay_by_id = {h.get('id'): h for h in overlay_list if h.get('id')}
-        
-        merged = []
-        
-        # Add base hooks (excluding overridden/excluded)
-        for hook in base_list:
-            hook_id = hook.get('id')
-            if hook_id in exclude_ids:
-                continue
-            if hook_id in overlay_by_id:
-                continue
-            merged.append(hook.copy())
-        
-        # Add overlay hooks
-        merged.extend(h.copy() for h in overlay_list)
-        
-        return merged
     
     def get_hooks_for_file(self, file_path: str, event_type: str, 
                           tool: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -225,73 +170,7 @@ class HierarchicalConfigLoader:
         config = self.get_config_for_path(file_path)
         hooks = config.get('hooks', {}).get(event_type, [])
         
-        # Filter by file pattern and tool
-        applicable = []
-        for hook in hooks:
-            if self._hook_applies(hook, file_path, tool):
-                applicable.append(hook)
-        
-        # Sort by priority
-        return sorted(applicable, key=lambda h: -h.get('priority', 50))
-    
-    def _hook_applies(self, hook: Dict[str, Any], file_path: str, 
-                      tool: Optional[str]) -> bool:
-        """Check if a hook applies to a file and tool."""
-        # Check if disabled
-        if hook.get('disabled', False):
-            return False
-        
-        # Check file patterns
-        if not self._matches_file_patterns(hook, file_path):
-            return False
-        
-        # Check tool filter
-        if not self._matches_tool_filter(hook, tool):
-            return False
-        
-        # Check directory filter
-        if not self._matches_directory_filter(hook, file_path):
-            return False
-        
-        return True
-    
-    def _matches_file_patterns(self, hook: Dict[str, Any], file_path: str) -> bool:
-        """Check if file matches hook patterns."""
-        patterns = hook.get('file_patterns')
-        if not patterns:
-            return True
-        
-        filename = os.path.basename(file_path)
-        return any(fnmatch.fnmatch(filename, p) for p in patterns)
-    
-    def _matches_tool_filter(self, hook: Dict[str, Any], tool: Optional[str]) -> bool:
-        """Check if tool matches hook filter."""
-        tools = hook.get('tools')
-        if not tools or '*' in tools:
-            return True
-        if not tool:
-            return False
-        return tool in tools
-    
-    def _matches_directory_filter(self, hook: Dict[str, Any], file_path: str) -> bool:
-        """Check if file is in allowed directories."""
-        directories = hook.get('directories')
-        if not directories:
-            return True
-        
-        try:
-            rel_path = os.path.relpath(file_path, self.project_root)
-            return any(self._is_in_directory(rel_path, d) for d in directories)
-        except ValueError:
-            return False
-    
-    def _is_in_directory(self, file_path: str, directory: str) -> bool:
-        """Check if file is in a specific directory."""
-        starts_with_sep = file_path.startswith(directory + os.sep)
-        equals_dir = file_path == directory
-        starts_with_slash = ('/' in file_path and 
-                            file_path.startswith(directory + '/'))
-        return starts_with_sep or equals_dir or starts_with_slash
+        return filter_hooks_for_file(hooks, file_path, tool, self.project_root)
 
 
 # Convenience function

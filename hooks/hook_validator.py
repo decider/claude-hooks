@@ -53,7 +53,7 @@ def _parse_json_config(content: str, rel_path: Path, errors: List[str]) -> Dict[
         return {}
 
 
-def _validate_hooks_structure(hooks: Any, rel_path: Path, errors: List[str], 
+def _validate_hooks_structure(hooks: Any, rel_path: Path, errors: List[str],
                              warnings: List[str], project_root: Path):
     """Validate the hooks structure."""
     if not isinstance(hooks, dict):
@@ -64,7 +64,7 @@ def _validate_hooks_structure(hooks: Any, rel_path: Path, errors: List[str],
         _validate_event_type(event_type, hook_list, rel_path, errors, warnings, project_root)
 
 
-def _validate_event_type(event_type: str, hook_list: Any, rel_path: Path, 
+def _validate_event_type(event_type: str, hook_list: Any, rel_path: Path,
                         errors: List[str], warnings: List[str], project_root: Path):
     """Validate a single event type and its hooks."""
     valid_events = ['pre-tool', 'post-tool', 'stop']
@@ -80,8 +80,8 @@ def _validate_event_type(event_type: str, hook_list: Any, rel_path: Path,
         _validate_single_hook(hook, event_type, i, rel_path, errors, warnings, project_root)
 
 
-def _validate_single_hook(hook: Dict[str, Any], event_type: str, index: int, 
-                         rel_path: Path, errors: List[str], warnings: List[str], 
+def _validate_single_hook(hook: Dict[str, Any], event_type: str, index: int,
+                         rel_path: Path, errors: List[str], warnings: List[str],
                          project_root: Path):
     """Validate a single hook configuration."""
     # Check required fields

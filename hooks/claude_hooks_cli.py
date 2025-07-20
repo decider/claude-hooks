@@ -14,13 +14,14 @@ import os
 import sys
 from pathlib import Path
 from typing import List, Dict, Any
-import fnmatch
 
 from config_loader import HierarchicalConfigLoader
-from cli_utils import (Colors, format_hook_info, print_hook_status, 
+from cli_utils import (Colors, format_hook_info, print_hook_status,
                       print_error, print_warning, print_success,
                       format_patterns, format_tools)
-from hook_validator import validate_config_file, find_all_config_files
+from hook_validator import find_all_config_files
+from cli_parser import create_parser
+from cli_commands import cmd_validate
 
 
 def gather_all_hooks(loader: HierarchicalConfigLoader) -> List[Dict[str, Any]]:
@@ -222,67 +223,13 @@ def _display_config_chain(loader: HierarchicalConfigLoader, file_path: str):
     print()
 
 
-def cmd_validate(args):
-    """Validate all configuration files."""
-    loader = HierarchicalConfigLoader()
-    root = Path(loader.project_root)
-    config_files = find_all_config_files(root)
-    
-    if not config_files:
-        print_warning("No configuration files found")
-        return 1
-    
-    print(f"\n{Colors.BOLD}Validating hook configurations...{Colors.ENDC}\n")
-    
-    all_errors = []
-    all_warnings = []
-    
-    for config_path in config_files:
-        errors, warnings = validate_config_file(config_path, root)
-        
-        rel_path = config_path.relative_to(root)
-        
-        if errors:
-            print(f"  {Colors.FAIL}✗{Colors.ENDC} {rel_path}")
-            all_errors.extend(errors)
-        else:
-            print(f"  {Colors.GREEN}✓{Colors.ENDC} {rel_path}")
-        
-        all_warnings.extend(warnings)
-    
-    print()
-    
-    # Report results
-    _display_validation_results(all_errors, all_warnings)
-    
-    return 1 if all_errors else 0
-
-
-def _display_validation_results(errors: List[str], warnings: List[str]):
-    """Display validation results."""
-    if errors:
-        print(f"{Colors.FAIL}Errors found:{Colors.ENDC}")
-        for error in errors:
-            print(f"  • {error}")
-        print()
-    
-    if warnings:
-        print(f"{Colors.WARNING}Warnings:{Colors.ENDC}")
-        for warning in warnings:
-            print(f"  • {warning}")
-        print()
-    
-    if not errors and not warnings:
-        print_success("All configurations are valid!")
-
-
 def main():
     """Main entry point."""
     # Disable colors if output is not a TTY
     if not sys.stdout.isatty():
         Colors.disable()
     
-    parser = _create_parser()
+    parser = create_parser()
     args = parser.parse_args()
     
     # Execute command
@@ -292,52 +239,6 @@ def main():
         cmd_explain(args)
     elif args.command == 'validate':
         sys.exit(cmd_validate(args))
-
-
-def _create_parser():
-    """Create the argument parser."""
-    parser = argparse.ArgumentParser(
-        description='Claude Hooks CLI - Introspection and management tool',
-        formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-    
-    subparsers = parser.add_subparsers(dest='command', required=True)
-    
-    # List command
-    list_parser = subparsers.add_parser(
-        'list', 
-        help='List all hooks in the repository'
-    )
-    list_parser.add_argument(
-        '--json', 
-        action='store_true', 
-        help='Output as JSON'
-    )
-    list_parser.add_argument(
-        '-v', '--verbose', 
-        action='store_true', 
-        help='Show detailed information'
-    )
-    
-    # Explain command
-    explain_parser = subparsers.add_parser(
-        'explain', 
-        help='Show effective hooks for a file'
-    )
-    explain_parser.add_argument('file', help='File path to explain')
-    explain_parser.add_argument(
-        '-v', '--verbose', 
-        action='store_true', 
-        help='Show detailed information'
-    )
-    
-    # Validate command
-    validate_parser = subparsers.add_parser(
-        'validate', 
-        help='Validate all configuration files'
-    )
-    
-    return parser
 
 
 if __name__ == '__main__':
