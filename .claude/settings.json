@@ -1,27 +1,37 @@
 {
-  "_comment": "Claude Code hooks configuration (using claude-code-hooks-cli)",
+  "_comment": "Claude Code hooks - simplified entry points (edit .claude/hooks/config.cjs to manage hooks)",
   "hooks": {
     "PreToolUse": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec check-package-age"
+            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
           }
-        ],
-        "matcher": "Bash",
-        "pattern": "^(npm\\s+(install|i|add)|yarn\\s+(add|install))\\s+"
+        ]
       }
     ],
     "PostToolUse": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "npx claude-code-hooks-cli exec code-quality-validator"
+            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
           }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/danseider/claude-hooks/universal-hook-wrapper.sh"
+          }
+        ]
       }
     ]
   }

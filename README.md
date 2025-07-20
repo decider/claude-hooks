@@ -13,7 +13,8 @@ Professional hook management system for Claude Code - TypeScript-based validatio
 🛡️ **Settings Validation** - Automatic validation when loading/saving hook configurations  
 ✅ **CLI Validation Command** - `claude-hooks validate` to check settings files  
 ⚡ **TypeScript-Powered** - Full type safety with modern JavaScript features  
-🎮 **Interactive CLI** - `claude-hooks` command for all hook management needs
+🎮 **Interactive CLI** - `claude-hooks` command for all hook management needs  
+🚦 **Checkpoint Workflows** - Stop Claude and enforce quality gates with JSON output
 
 ## Installation
 
@@ -118,6 +119,29 @@ All hooks run directly from the npm package via TypeScript commands. Your `.clau
     }]
   }
 }
+```
+
+## Writing Custom Hooks
+
+Want to create your own hooks? Check out:
+- 📖 **[Hook Development Guide](docs/HOOK-DEVELOPMENT.md)** - Complete guide with event data structures
+- 💡 **[Example Hooks](examples/hooks/)** - Working examples: command logger, file validator, multi-event monitor
+- 🔧 **[Entry Points Docs](docs/ENTRY-POINTS.md)** - How the universal hook system works
+
+Quick example of a custom hook:
+```javascript
+#!/usr/bin/env node
+// Read event data from stdin
+let input = '';
+process.stdin.on('data', chunk => input += chunk);
+process.stdin.on('end', () => {
+  const data = JSON.parse(input);
+  console.log(`Event: ${data.hook_event_name}`);
+  
+  if (data.tool_name === 'Bash') {
+    console.log(`Command: ${data.tool_input.command}`);
+  }
+});
 ```
 
 ## Available Hooks
@@ -239,6 +263,36 @@ You can discover project-specific hooks by creating `.claude/hooks.json` in your
 - **Project** (`.claude/settings.json`) - Shared with your team, committed to git (recommended)
 - **Local** (`.claude/settings.local.json`) - Personal settings, git ignored
 - **Global** (`~/.claude/settings.json`) - Applies to all your projects
+
+## Checkpoint Workflows (New!)
+
+Hooks can now create "quality gates" that stop Claude from continuing until issues are resolved. This enables checkpoint-based workflows using JSON output:
+
+```json
+{
+  "continue": false,
+  "stopReason": "Quality checks failed - see below",
+  "decision": "block",
+  "reason": "Please fix the failing tests before completing"
+}
+```
+
+### Example: Stop on Errors
+```bash
+# In your Stop event hook
+if [ $ERROR_COUNT -gt 0 ]; then
+  echo '{"continue": false, "stopReason": "Errors must be fixed"}'
+  exit 0
+fi
+```
+
+### Use Cases
+- **Enforce Testing** - Stop if tests haven't been run
+- **Require Documentation** - Block completion without docs
+- **Quality Standards** - Enforce linting, formatting, etc.
+- **Error Prevention** - Stop when errors are detected
+
+See [Stop Hooks Guide](./docs/stop-hooks-guide.md) for detailed documentation.
 
 ## What's New
 

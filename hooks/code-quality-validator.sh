@@ -1,239 +1,120 @@
 #!/bin/bash
 
+# Code Quality Validator Hook
+# Enforces clean code standards using modular checks
 
-# Source logging library
-HOOK_NAME="code-quality-validator"
+# Source the quality checks loader
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common/logging.sh"
+source "$SCRIPT_DIR/common/code-quality/loader.sh"
 
-# Start performance timing
-START_TIME=$(date +%s)
-
-# Log hook start
-log_hook_start "$HOOK_NAME" "Hook invoked"
-
-# Claude Code Post-Hook: Code Quality Validator
-# Validates code against Clean Code principles after operations
-
+# Read input
 INPUT=$(cat)
 TOOL=$(echo "$INPUT" | jq -r '.tool // empty')
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
 EXIT_CODE=$(echo "$INPUT" | jq -r '.exit_code // 0')
 
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
 # Configuration
-# Use project-relative paths if running from project
-if [ -d "$(pwd)/claude/hooks" ]; then
-    RULES_FILE="${CLAUDE_RULES_FILE:-$(pwd)/claude/hooks/clean-code-rules.json}"
-else
-    RULES_FILE="${CLAUDE_RULES_FILE:-$HOME/claude/hooks/clean-code-rules.json}"
-fi
+RULES_FILE="${CLAUDE_RULES_FILE:-$SCRIPT_DIR/clean-code-rules.json}"
 
-if [ ! -f "$RULES_FILE" ]; then
-    # Use default rules if config doesn't exist
-    MAX_FUNCTION_LINES=20
-    MAX_FILE_LINES=100
-    MAX_NESTING=3
-    MAX_PARAMS=3
-    MAX_LINE_LENGTH=80
-else
-    # Load rules from config
-    MAX_FUNCTION_LINES=$(jq -r '.rules.maxFunctionLines // 20' "$RULES_FILE")
-    MAX_FILE_LINES=$(jq -r '.rules.maxFileLines // 100' "$RULES_FILE")
-    MAX_NESTING=$(jq -r '.rules.maxNestingDepth // 3' "$RULES_FILE")
-    MAX_PARAMS=$(jq -r '.rules.maxParameters // 3' "$RULES_FILE")
-    MAX_LINE_LENGTH=$(jq -r '.rules.maxLineLength // 80' "$RULES_FILE")
-fi
+# Check if this is a Stop event (no tool)
+EVENT_TYPE=$(echo "$INPUT" | jq -r '.hook_event_name // empty' 2>/dev/null)
 
-# Function to count lines in a function
-count_function_lines() {
-    local file="$1"
-    local violations=()
+if [[ "$EVENT_TYPE" == "Stop" ]]; then
+    # For Stop events, check recently modified files
+    echo -e "${CYAN}🔍 Running code quality checks on recently modified files...${NC}"
     
-    # TypeScript/JavaScript function detection
-    if [[ "$file" =~ \.(ts|tsx|js|jsx)$ ]]; then
-        # Find function blocks and count lines
-        awk '
-        /function\s+\w+\s*\(|const\s+\w+\s*=.*=>|\w+\s*\([^)]*\)\s*{/ {
-            func_name = $0
-            gsub(/^[[:space:]]*/, "", func_name)
-            gsub(/[[:space:]]*{.*/, "", func_name)
-            brace_count = 1
-            line_count = 0
-            in_function = 1
-            start_line = NR
-        }
-        in_function {
-            line_count++
-            if (/{/) brace_count += gsub(/{/, "{")
-            if (/}/) brace_count -= gsub(/}/, "}")
-            if (brace_count == 0) {
-                if (line_count > '"$MAX_FUNCTION_LINES"') {
-                    print start_line ":" func_name ":" line_count
-                }
-                in_function = 0
-            }
-        }
-        ' "$file"
-    fi
-}
-
-# Function to check nesting depth
-check_nesting_depth() {
-    local file="$1"
-    local max_depth=0
-    local current_depth=0
+    # Find files modified in the last 5 minutes
+    RECENT_FILES=$(find . -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" | \
+                   xargs -I {} sh -c 'test -f "{}" && echo "{}"' | \
+                   xargs ls -lt 2>/dev/null | head -10 | awk '{print $NF}')
     
-    while IFS= read -r line; do
-        # Count opening braces
-        local opens=$(echo "$line" | tr -cd '{' | wc -c)
-        # Count closing braces
-        local closes=$(echo "$line" | tr -cd '}' | wc -c)
+    TOTAL_VIOLATIONS=0
+    for file in $RECENT_FILES; do
+        if [[ -f "$file" ]] && [[ ! "$file" =~ (test|spec)\. ]]; then
+            echo -e "\nChecking: $file"
+            if ! run_all_quality_checks "$file" "$RULES_FILE"; then
+                TOTAL_VIOLATIONS=$((TOTAL_VIOLATIONS + $?))
+            fi
+        fi
+    done
+    
+    if [[ $TOTAL_VIOLATIONS -eq 0 ]]; then
+        echo -e "\n${GREEN}✅ All code quality checks passed${NC}"
+        echo '{"continue": true}'
+    else
+        echo -e "\n${RED}❌ Found $TOTAL_VIOLATIONS total code quality violation(s)${NC}"
+        echo -e "${YELLOW}💡 Consider refactoring to improve code quality${NC}"
         
-        current_depth=$((current_depth + opens - closes))
-        if [ "$current_depth" -gt "$max_depth" ]; then
-            max_depth=$current_depth
-        fi
-    done < "$file"
-    
-    echo "$max_depth"
-}
-
-# Function to check for magic numbers
-check_magic_numbers() {
-    local file="$1"
-    # Find numeric literals (excluding 0, 1, -1)
-    grep -nE '\b[0-9]+\.?[0-9]*\b' "$file" | \
-        grep -vE '\b[01]\b|\.env|config|const|let|var' | \
-        grep -vE '(0x|#)[0-9a-fA-F]+' | \
-        head -5
-}
-
-# Function to validate a single file
-validate_file() {
-    local file="$1"
-    local violations=()
-    local warnings=()
-    
-    if [ ! -f "$file" ]; then
-        return 0
-    fi
-    
-    echo "🔍 Validating: $(basename "$file")" >&2
-    
-    # Check file length
-    local line_count=$(wc -l < "$file")
-    if [ "$line_count" -gt "$MAX_FILE_LINES" ]; then
-        violations+=("❌ File too long: $line_count lines (max: $MAX_FILE_LINES)")
-    fi
-    
-    # Check function lengths
-    local long_functions=$(count_function_lines "$file")
-    if [ -n "$long_functions" ]; then
-        while IFS=: read -r line_num func_name func_lines; do
-            violations+=("❌ Function too long at line $line_num: $func_lines lines (max: $MAX_FUNCTION_LINES)")
-        done <<< "$long_functions"
-    fi
-    
-    # Check nesting depth
-    local max_nesting=$(check_nesting_depth "$file")
-    if [ "$max_nesting" -gt "$MAX_NESTING" ]; then
-        violations+=("❌ Excessive nesting: depth $max_nesting (max: $MAX_NESTING)")
-    fi
-    
-    # Check line length
-    local long_lines=$(awk -v max="$MAX_LINE_LENGTH" 'length($0) > max { print NR }' "$file" | head -5)
-    if [ -n "$long_lines" ]; then
-        local count=$(echo "$long_lines" | wc -l)
-        violations+=("❌ $count lines exceed $MAX_LINE_LENGTH characters (lines: $(echo $long_lines | tr '\n' ', '))")
-    fi
-    
-    # Check for magic numbers
-    local magic_numbers=$(check_magic_numbers "$file")
-    if [ -n "$magic_numbers" ]; then
-        warnings+=("⚠️  Magic numbers detected - consider using named constants")
-    fi
-    
-    # Check for excessive comments (code should be self-documenting)
-    local total_lines=$(grep -cv '^[[:space:]]*$' "$file" || echo 0)
-    local comment_lines=$(grep -cE '^\s*(//|/\*|\*|#)' "$file" || echo 0)
-    if [ "$total_lines" -gt 0 ]; then
-        local comment_ratio=$(echo "scale=2; $comment_lines / $total_lines" | bc)
-        if (( $(echo "$comment_ratio > 0.2" | bc -l) )); then
-            warnings+=("⚠️  High comment ratio: ${comment_ratio} (code should be self-documenting)")
-        fi
-    fi
-    
-    # Check for code duplication patterns
-    if [[ "$file" =~ \.(ts|tsx|js|jsx)$ ]]; then
-        # Check for repeated similar function calls
-        local repeated_patterns=$(grep -oE '\b\w+\(' "$file" | sort | uniq -c | sort -rn | awk '$1 > 5 {print $2}' | head -3)
-        if [ -n "$repeated_patterns" ]; then
-            warnings+=("⚠️  Repeated patterns detected - consider extracting to utilities")
-        fi
-    fi
-    
-    # Output results
-    if [ ${#violations[@]} -gt 0 ]; then
-        echo "━━━ CLEAN CODE VIOLATIONS ━━━" >&2
-        printf '%s\n' "${violations[@]}" >&2
-    fi
-    
-    if [ ${#warnings[@]} -gt 0 ]; then
-        echo "━━━ WARNINGS ━━━" >&2
-        printf '%s\n' "${warnings[@]}" >&2
-    fi
-    
-    if [ ${#violations[@]} -eq 0 ] && [ ${#warnings[@]} -eq 0 ]; then
-        echo "✅ All Clean Code checks passed!" >&2
-    fi
-    
-    # Return number of violations
-    return ${#violations[@]}
-}
-
-# Main logic - only validate on successful write/edit operations
-if [ "$EXIT_CODE" -eq 0 ] && [[ "$TOOL" =~ ^(Write|Edit|MultiEdit)$ ]] && [ -n "$FILE_PATH" ]; then
-    # Only validate code files
-    if [[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx|rs|py)$ ]]; then
-        echo "" >&2
-        echo "🧹 Clean Code Validation" >&2
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
+        # Block if violations exceed threshold
+        BLOCK_THRESHOLD="${CODE_QUALITY_BLOCK_THRESHOLD:-999}"  # Default: never block
         
-        validate_file "$FILE_PATH"
-        validation_result=$?
-        
-        if [ $validation_result -gt 0 ]; then
-            echo "" >&2
-            echo "💡 Suggestions:" >&2
-            echo "   - Extract large functions into smaller, focused functions" >&2
-            echo "   - Reduce nesting by using early returns" >&2
-            echo "   - Use descriptive names instead of comments" >&2
-            echo "   - Extract magic numbers to named constants" >&2
-            echo "   - Check for existing utilities before creating new ones" >&2
+        if [[ $TOTAL_VIOLATIONS -gt $BLOCK_THRESHOLD ]]; then
+            cat <<EOF
+{
+  "continue": false,
+  "stopReason": "Code quality violations in recent files",
+  "decision": "block",
+  "reason": "Found $TOTAL_VIOLATIONS total code quality violations across recent files (threshold: $BLOCK_THRESHOLD).\n\nClean code principles violated:\n- Functions too long\n- Deep nesting\n- Magic numbers\n- High comment ratio\n\nPlease refactor before proceeding."
+}
+EOF
+        else
+            echo '{"continue": true}'
         fi
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >&2
     fi
-fi
-
-# Always pass through the input
-echo "$INPUT"
-
-# Track if validation failed
-VALIDATION_FAILED=0
-if [ -f "$FILE_PATH" ]; then
-    # Run validation again to get exit code
-    validate_file "$FILE_PATH" >/dev/null 2>&1
-    VALIDATION_FAILED=$?
-fi
-
-# Log hook completion
-log_performance "$HOOK_NAME" $START_TIME
-
-if [ $VALIDATION_FAILED -gt 0 ]; then
-    log_hook_end "$HOOK_NAME" 2
-    exit 2  # Block the operation
-else
-    log_hook_end "$HOOK_NAME" 0
     exit 0
 fi
 
+# For tool events, check specific file
+if [[ ! "$TOOL" =~ ^(Write|Edit|MultiEdit)$ ]] || [[ "$EXIT_CODE" != "0" ]] || [[ -z "$FILE_PATH" ]] || [[ "$FILE_PATH" == "null" ]]; then
+    echo '{"continue": true}'
+    exit 0
+fi
+
+# Skip non-code files
+if [[ ! "$FILE_PATH" =~ \.(ts|tsx|js|jsx|py|rs|go|java)$ ]]; then
+    echo '{"continue": true}'
+    exit 0
+fi
+
+# Skip test files
+if [[ "$FILE_PATH" =~ (test|spec)\. ]]; then
+    echo '{"continue": true}'
+    exit 0
+fi
+
+echo -e "${CYAN}🔍 Running code quality checks on ${FILE_PATH}...${NC}"
+
+# Run all quality checks
+if run_all_quality_checks "$FILE_PATH" "$RULES_FILE"; then
+    echo -e "${GREEN}✅ All code quality checks passed${NC}"
+    echo '{"continue": true}'
+    exit 0
+else
+    VIOLATIONS=$?
+    echo -e "\n${RED}❌ Found $VIOLATIONS code quality violation(s)${NC}"
+    echo -e "${YELLOW}💡 Consider refactoring to improve code quality${NC}"
+    
+    # Block if violations exceed threshold (configurable)
+    BLOCK_THRESHOLD="${CODE_QUALITY_BLOCK_THRESHOLD:-999}"  # Default: never block
+    
+    if [[ $VIOLATIONS -gt $BLOCK_THRESHOLD ]]; then
+        cat <<EOF
+{
+  "continue": false,
+  "stopReason": "Code quality violations exceed threshold",
+  "decision": "block",
+  "reason": "Found $VIOLATIONS code quality violations (threshold: $BLOCK_THRESHOLD).\n\nPlease fix:\n- Functions exceeding max length\n- Deep nesting levels\n- Magic numbers\n- Other clean code violations\n\nRun code quality checks locally to see all issues."
+}
+EOF
+    else
+        echo '{"continue": true}'
+    fi
+    exit 0
+fi
