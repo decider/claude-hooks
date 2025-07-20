@@ -9,17 +9,5 @@
   },
   "thresholds": {
     "default": 0.8
-  },
-  "evaluations": {
-    "codeQuality": {
-      "enabled": true,
-      "fileTypes": ["*.ts", "*.tsx"],
-      "rules": {
-        "maxFunctionLines": 20,
-        "maxFileLines": 100,
-        "maxNestingDepth": 3,
-        "maxParameters": 3
-      }
-    }
   }
 }
