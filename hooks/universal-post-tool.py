@@ -32,33 +32,32 @@ def run_hook(hook_script, input_data):
     except:
         return {"action": "continue"}
 
+def parse_input():
+    """Parse input from stdin."""
+    try:
+        return json.loads(sys.stdin.read())
+    except:
+        return None
+
+def route_to_hook(input_data):
+    """Route to appropriate hook based on tool type."""
+    tool_name = input_data.get('tool_name', '')
+    
+    if tool_name in ['Write', 'Edit', 'MultiEdit']:
+        # Run quality validation on written files
+        return run_hook('post-tool-hook.py', input_data)
+    
+    # No post-processing for other tools yet
+    return {"action": "continue"}
+
 def main():
     """Main dispatcher entry point."""
-    # Read input from stdin
-    try:
-        input_data = json.loads(sys.stdin.read())
-    except:
+    input_data = parse_input()
+    if not input_data:
         print(json.dumps({"action": "continue"}))
         return
     
-    # Get tool name
-    tool_name = input_data.get('tool_name', '')
-    
-    # Route based on tool type
-    if tool_name in ['Write', 'Edit', 'MultiEdit']:
-        # Run quality validation on written files
-        response = run_hook('post-tool-hook.py', input_data)
-    else:
-        # No post-processing for other tools yet
-        response = {"action": "continue"}
-    
-    # Could add more hooks here in the future:
-    # - Git commit hooks
-    # - Test completion hooks
-    # - Build completion hooks
-    # etc.
-    
-    # Output response
+    response = route_to_hook(input_data)
     print(json.dumps(response))
 
 if __name__ == '__main__':

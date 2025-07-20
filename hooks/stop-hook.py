@@ -6,44 +6,46 @@ import sys
 import subprocess
 import os
 
-def main():
-    """Main entry point."""
-    # Read input from stdin
+def parse_input():
+    """Parse input from stdin."""
     input_text = sys.stdin.read()
-    
     try:
         input_data = json.loads(input_text)
+        return input_text, input_data
     except:
-        # Invalid JSON, no output means continue
-        return
-    
-    # Only process Stop events
-    event_type = input_data.get('hook_event_name', '')
-    if event_type != 'Stop':
-        # No output means continue
-        return
-    
-    # Forward to the quality validator
+        return None, None
+
+def run_validator(input_text):
+    """Run the quality validator."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     validator_path = os.path.join(script_dir, 'portable-quality-validator.py')
     
     try:
-        # Run the validator with the same input
         result = subprocess.run(
             ['python3', validator_path],
             input=input_text,
             capture_output=True,
             text=True
         )
-        
-        # Pass through the validator's output
-        if result.stdout:
-            print(result.stdout.strip())
-        # Otherwise no output means continue
-            
-    except Exception as e:
-        # If validator fails, no output means continue
-        pass
+        return result.stdout
+    except:
+        return None
+
+def main():
+    """Main entry point."""
+    input_text, input_data = parse_input()
+    if not input_data:
+        return
+    
+    # Only process Stop events
+    event_type = input_data.get('hook_event_name', '')
+    if event_type != 'Stop':
+        return
+    
+    # Run validator and print output if any
+    validator_output = run_validator(input_text)
+    if validator_output:
+        print(validator_output.strip())
 
 if __name__ == '__main__':
     main()

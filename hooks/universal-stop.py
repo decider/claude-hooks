@@ -32,16 +32,15 @@ def run_hook(hook_script, input_data):
     except:
         return {}  # No decision means continue
 
-def main():
-    """Main dispatcher entry point."""
-    # Read input from stdin
+def parse_input():
+    """Parse input from stdin."""
     try:
-        input_data = json.loads(sys.stdin.read())
+        return json.loads(sys.stdin.read())
     except:
-        print(json.dumps({"action": "continue"}))
-        return
-    
-    # Run all stop hooks
+        return None
+
+def run_all_stop_hooks(input_data):
+    """Run all stop hooks and collect responses."""
     responses = []
     
     # 1. Run quality validator for final checks
@@ -50,19 +49,27 @@ def main():
     # 2. Send completion notification
     responses.append(run_hook('task-completion-notify.py', input_data))
     
-    # Could add more hooks here in the future:
-    # - Session summary generator
-    # - Git status check
-    # - Test coverage report
-    # etc.
-    
-    # If any hook wants to block, respect that
+    return responses
+
+def check_for_blocks(responses):
+    """Check if any hook wants to block."""
     for response in responses:
         if response.get('decision') == 'block':
-            print(json.dumps(response))
-            return
+            return response
+    return None
+
+def main():
+    """Main dispatcher entry point."""
+    input_data = parse_input()
+    if not input_data:
+        print(json.dumps({"action": "continue"}))
+        return
     
-    # Otherwise continue (no output needed for continue)
+    responses = run_all_stop_hooks(input_data)
+    block_response = check_for_blocks(responses)
+    
+    if block_response:
+        print(json.dumps(block_response))
 
 if __name__ == '__main__':
     main()

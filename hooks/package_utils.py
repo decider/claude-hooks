@@ -4,6 +4,7 @@
 import re
 import urllib.request
 import json
+import sys
 from datetime import datetime
 
 def parse_package_spec(package_spec):
@@ -72,3 +73,17 @@ def extract_packages_from_command(command):
         return [p for p in packages_str.split() if p and not p.startswith('-')]
     
     return []
+
+def log_to_stderr(message):
+    """Log to stderr for debugging."""
+    print(message, file=sys.stderr)
+
+def parse_hook_input():
+    """Parse and validate hook input."""
+    input_text = sys.stdin.read()
+    
+    try:
+        return json.loads(input_text)
+    except json.JSONDecodeError:
+        log_to_stderr("Failed to parse input JSON")
+        return None

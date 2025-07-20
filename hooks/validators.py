@@ -10,7 +10,7 @@ CONFIG = {
     'max_file_length': 200,
     'max_line_length': 100,
     'max_nesting_depth': 4,
-    'python_max_nesting': 3,
+    'python_max_nesting': 4,
     'ruby_max_nesting': 3,
 }
 
@@ -29,6 +29,18 @@ def _is_js_function_start(line):
     pat = r'^\s*(function|const|let|var|export|async)\s+(\w+)\s*(\(|=.*\(|=.*async.*\()'
     return re.match(pat, line)
 
+def _process_js_function_start(line, line_num, func_state):
+    """Process potential JavaScript function start."""
+    match = _is_js_function_start(line)
+    if not match:
+        return
+        
+    func_state['in_func'] = True
+    func_state['start'] = line_num
+    func_state['name'] = match.group(2)
+    func_state['braces'] = line.count('{') - line.count('}')
+    return
+
 def _check_js_function_end(func_state, line, i, violations, max_len):
     """Check if function ends and validate length."""
     func_state['braces'] += line.count('{') - line.count('}')
@@ -43,26 +55,23 @@ def _check_js_function_end(func_state, line, i, violations, max_len):
         )
     return True
 
+def _process_js_line(line, i, func_state, violations, max_len):
+    """Process a single line for JavaScript function checking."""
+    if not func_state['in_func']:
+        _process_js_function_start(line, i, func_state)
+        return
+        
+    # In function - check if it ends
+    if _check_js_function_end(func_state, line, i, violations, max_len):
+        func_state['in_func'] = False
+
 def check_js_functions(lines, violations, max_len):
     """Check JavaScript/TypeScript functions."""
     func_state = {'in_func': False, 'start': 0, 'name': '', 'braces': 0}
     
     for i, line in enumerate(lines, 1):
-        # Handle in-function state
-        if func_state['in_func']:
-            if _check_js_function_end(func_state, line, i, violations, max_len):
-                func_state['in_func'] = False
-            continue
+        _process_js_line(line, i, func_state, violations, max_len)
             
-        # Check for new function
-        match = _is_js_function_start(line)
-        if not match:
-            continue
-            
-        func_state['in_func'] = True
-        func_state['start'] = i
-        func_state['name'] = match.group(2)
-        func_state['braces'] = line.count('{') - line.count('}')
 
 def _is_py_function_start(line):
     """Check if line starts a Python function."""

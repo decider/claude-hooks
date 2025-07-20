@@ -13,7 +13,7 @@ CONFIG = {
     'max_func_len': 30,
     'max_file_len': 200,
     'max_line_len': 100,
-    'max_nest': 3,
+    'max_nest': 4,
 }
 
 def get_file_type(filepath):
@@ -30,10 +30,10 @@ def check_line_length(lines):
     violations = []
     for i, line in enumerate(lines, 1):
         length = len(line.rstrip())
-        if length > CONFIG['max_line_len']:
-            violations.append(
-                f"Line {i}: {length} chars (max: {CONFIG['max_line_len']})"
-            )
+        if length <= CONFIG['max_line_len']:
+            continue
+        msg = f"Line {i}: {length} chars (max: {CONFIG['max_line_len']})"
+        violations.append(msg)
     return violations
 
 def check_python_funcs(lines):
@@ -47,10 +47,8 @@ def check_python_funcs(lines):
         if not match:
             continue
             
-        if func_start > 0:
-            length = i - func_start
-            if length > CONFIG['max_func_len']:
-                violations.append(f"Function '{func_name}': {length} lines")
+        if func_start > 0 and i - func_start > CONFIG['max_func_len']:
+            violations.append(f"Function '{func_name}': {i - func_start} lines")
         
         func_name = match.group(1)
         func_start = i

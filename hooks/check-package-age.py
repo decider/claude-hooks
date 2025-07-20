@@ -13,16 +13,14 @@ from package_utils import (
     fetch_package_info,
     get_package_publish_date,
     get_latest_version_info,
-    extract_packages_from_command
+    extract_packages_from_command,
+    log_to_stderr,
+    parse_hook_input
 )
 
 # Configuration
 MAX_AGE_DAYS = int(os.environ.get('MAX_AGE_DAYS', '180'))  # Default: 6 months
 TEST_MODE = os.environ.get('CLAUDE_HOOKS_TEST_MODE', '0') == '1'
-
-def log_to_stderr(message):
-    """Log to stderr for debugging."""
-    print(message, file=sys.stderr)
 
 def handle_test_mode(package_spec):
     """Handle test mode logic."""
@@ -62,6 +60,36 @@ def check_package_validity(package_info, package_name, version):
         
     return publish_date, False
 
+def log_package_age(package_name, version, age_days):
+    """Log package age information."""
+    log_to_stderr(
+        f"Package {package_name}@{version} is {age_days} days old "
+        f"(within {MAX_AGE_DAYS} day limit)"
+    )
+
+def process_package_age(package_name, version, package_info):
+    """Process package age and return result."""
+    publish_date, should_allow = check_package_validity(
+        package_info, package_name, version
+    )
+    
+    if should_allow:
+        return True, None
+    
+    # Calculate age
+    age_days = (datetime.now() - publish_date).days
+    
+    if age_days <= MAX_AGE_DAYS:
+        log_package_age(package_name, version, age_days)
+        return True, None
+        
+    # Package is too old
+    error_msg = build_age_error_message(
+        package_name, version, age_days, package_info
+    )
+    log_to_stderr(error_msg)
+    return False, error_msg
+
 def check_package_age(package_spec):
     """Check if a package is too old."""
     package_name, version = parse_package_spec(package_spec)
@@ -76,30 +104,7 @@ def check_package_age(package_spec):
     
     try:
         package_info = fetch_package_info(package_name)
-        publish_date, should_allow = check_package_validity(
-            package_info, package_name, version
-        )
-        
-        if should_allow:
-            return True, None
-        
-        # Calculate age
-        age_days = (datetime.now() - publish_date).days
-        
-        if age_days <= MAX_AGE_DAYS:
-            log_to_stderr(
-                f"Package {package_name}@{version} is {age_days} days old "
-                f"(within {MAX_AGE_DAYS} day limit)"
-            )
-            return True, None
-            
-        # Package is too old
-        error_msg = build_age_error_message(
-            package_name, version, age_days, package_info
-        )
-        log_to_stderr(error_msg)
-        return False, error_msg
-        
+        return process_package_age(package_name, version, package_info)
     except Exception as e:
         log_to_stderr(f"Error checking {package_name}: {str(e)}")
         return True, None  # Allow if error
@@ -168,21 +173,13 @@ def handle_package_json_edit(input_data):
 
 def main():
     """Main entry point."""
-    # Read input from stdin
-    input_text = sys.stdin.read()
-    
-    try:
-        input_data = json.loads(input_text)
-    except json.JSONDecodeError:
-        log_to_stderr("Failed to parse input JSON")
+    input_data = parse_hook_input()
+    if not input_data:
         print(json.dumps({"action": "continue"}))
         return
     
-    # Get the tool name
-    tool_name = input_data.get('tool_name', '')
-    
     # Only process Bash tool
-    if tool_name != 'Bash':
+    if input_data.get('tool_name', '') != 'Bash':
         print(json.dumps({"action": "continue"}))
         return
     

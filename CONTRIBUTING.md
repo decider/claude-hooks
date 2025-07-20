@@ -25,80 +25,105 @@ To add a new hook:
 
 1. **Create the hook script** in `hooks/`
    ```bash
-   touch hooks/my-new-hook.sh
-   chmod +x hooks/my-new-hook.sh
+   touch hooks/my_new_hook.py
+   chmod +x hooks/my_new_hook.py
    ```
 
-2. **Add hook configuration** to `config/settings.example.json`
-   ```json
-   {
-     "matcher": "YourMatcher",
-     "hooks": [{
-       "type": "command",
-       "command": "./claude/hooks/my-new-hook.sh"
-     }]
-   }
-   ```
+2. **Integrate with universal hooks**
+   Add your validation logic to the appropriate universal hook:
+   - `universal-pre-tool.py` for pre-execution validation
+   - `universal-post-tool.py` for post-execution checks
+   - `universal-stop.py` for session completion tasks
 
-3. **Create tests** in `tests/`
-   ```bash
-   touch tests/test-my-new-hook.sh
-   chmod +x tests/test-my-new-hook.sh
+3. **Create tests** for your hook logic
+   ```python
+   # tests/test_my_new_hook.py
+   import unittest
+   from hooks.my_new_hook import validate_something
+   
+   class TestMyNewHook(unittest.TestCase):
+       def test_validation(self):
+           # Your test code here
+           pass
    ```
 
 4. **Update documentation**
-   - Add to the hooks table in README.md
+   - Add to the hooks list in README.md
    - Add detailed documentation to docs/README.md
 
 ## Code Style
 
-### Shell Scripts
-- Use `#!/bin/bash` shebang
-- Set `set -euo pipefail` for error handling
+### Python Scripts
+- Follow PEP 8 style guide
+- Use type hints where appropriate
+- Add docstrings to functions
+- Keep functions under 50 lines
 - Use meaningful variable names
-- Add comments for complex logic
-- Follow existing code patterns
 
 ### Example Hook Structure
-```bash
-#!/bin/bash
-set -euo pipefail
+```python
+#!/usr/bin/env python3
+"""
+Hook: My New Hook
+Purpose: Does something amazing
+Author: Your Name
+"""
 
-# Hook: My New Hook
-# Purpose: Does something amazing
-# Author: Your Name
+import json
+import sys
+from typing import Dict, Any
 
-# Configuration
-DEFAULT_VALUE="${MY_HOOK_VALUE:-default}"
+def validate_something(event_data: Dict[str, Any]) -> bool:
+    """Validate something based on event data.
+    
+    Args:
+        event_data: The event data from Claude
+        
+    Returns:
+        bool: True if valid, False otherwise
+    """
+    # Your validation logic here
+    return True
 
-# Main logic
-main() {
-    echo "🚀 Running my new hook..."
-    # Your code here
-}
+def main():
+    """Main entry point for the hook."""
+    try:
+        # Read event data from stdin
+        event_data = json.loads(sys.stdin.read())
+        
+        # Perform validation
+        if not validate_something(event_data):
+            print("❌ Validation failed")
+            sys.exit(1)
+            
+        print("✅ Validation passed")
+        
+    except Exception as e:
+        print(f"❌ Hook error: {e}")
+        sys.exit(1)
 
-# Run main function
-main "$@"
+if __name__ == "__main__":
+    main()
 ```
 
 ## Testing
 
-All hooks must have tests:
+Test your hooks thoroughly:
 
 ```bash
-# Run all tests
-cd tests
-./test-all-hooks.sh
+# Run Python tests
+python -m pytest tests/
 
-# Run specific test
-./test-my-new-hook.sh
+# Test hook manually
+echo '{"tool_name": "Bash", "tool_input": {"command": "test"}}' | python3 hooks/my_new_hook.py
 ```
 
 ## Pull Request Process
 
-1. Update the README.md with details of changes to the interface
-2. Update the VERSION file with the new version number
-3. The PR will be merged once you have the sign-off of at least one maintainer
+1. Update the README.md with details of changes
+2. Update documentation as needed
+3. Ensure all tests pass
+4. The PR will be merged once you have the sign-off of at least one maintainer
 
 ## Any contributions you make will be under the MIT Software License
 
