@@ -56,13 +56,19 @@ def handle_post_tool_use(data):
     if not violations:
         return
         
-    # Provide strong warning but don't block
-    print(f"\n⚠️  WARNING: Code quality issues in {filepath}:", file=sys.stderr)
+    # Block with violations using official Claude Code format
+    violation_msg = f"Code quality violations in {filepath}:\n"
     for v in violations:
-        print(f"  - {v}", file=sys.stderr)
-        print(f"    → Fix: {get_fix_instruction(v)}", file=sys.stderr)
-    print("\n🚨 YOU WILL BE BLOCKED at session end if these aren't fixed!", file=sys.stderr)
-    print("   FIX NOW: Address the issues above immediately.\n", file=sys.stderr)
+        violation_msg += f"  - {v}\n"
+        violation_msg += f"    → Fix: {get_fix_instruction(v)}\n"
+    violation_msg += "\nFix these violations before proceeding."
+    
+    output = {
+        "decision": "block",
+        "reason": violation_msg
+    }
+    print(json.dumps(output))
+    sys.exit(0)
 
 def categorize_violations(violations, filepath):
     """Categorize violations by type."""

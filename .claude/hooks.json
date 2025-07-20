@@ -2,6 +2,7 @@
   "pre-tool": [
     {
       "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py",
       "file_patterns": ["*.py"],
       "config": {
         "max_function_length": 50,
@@ -12,7 +13,8 @@
   ],
   "post-tool": [
     {
-      "id": "code-quality-validator", 
+      "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py", 
       "file_patterns": ["*.py"],
       "config": {
         "max_function_length": 50,
@@ -24,6 +26,7 @@
   "stop": [
     {
       "id": "code-quality-validator",
+      "script": "hooks/portable-quality-validator.py",
       "file_patterns": ["*.py"],
       "config": {
         "max_function_length": 50,

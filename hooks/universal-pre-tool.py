@@ -9,6 +9,10 @@ from config_loader import get_hooks_for_phase
 
 def run_hook(hook, ctx):
     """Run a single hook script with config passed via env."""
+    # Skip hooks without script field (built-ins)
+    if "script" not in hook:
+        return None
+    
     script_path = hook["script"]
     
     # Handle relative paths
@@ -17,7 +21,7 @@ def run_hook(hook, ctx):
         script_path = os.path.join(script_dir, "..", script_path)
     
     if not os.path.exists(script_path):
-        return {"action": "continue"}
+        return None
     
     # Set up environment with hook config
     env = os.environ.copy()
@@ -32,18 +36,25 @@ def run_hook(hook, ctx):
             text=True,
         )
         
-        # Handle different return codes
+        # Handle official Claude Code hook exit codes
         if result.returncode == 2:
-            # Legacy support: exit code 2 means block
-            return {"action": "block", "message": result.stderr.strip()}
+            # Exit code 2 means block - stderr goes to Claude
+            print(result.stderr.strip(), file=sys.stderr)
+            sys.exit(2)
+        elif result.returncode != 0:
+            # Other non-zero exit codes are non-blocking errors - stderr shown to user
+            print(result.stderr.strip(), file=sys.stderr)
+            sys.exit(result.returncode)
         
-        if result.stdout:
-            return json.loads(result.stdout.strip())
+        # Exit code 0 - pass through stdout (including JSON)
+        if result.stdout.strip():
+            print(result.stdout.strip())
+            sys.exit(0)
         
-        return {"action": "continue"}
+        return None
     except Exception as e:
         # On error, continue rather than block
-        return {"action": "continue"}
+        return None
 
 def main():
     """Main dispatcher entry point."""
@@ -51,8 +62,7 @@ def main():
     try:
         ctx = json.loads(sys.stdin.read())
     except:
-        print(json.dumps({"action": "continue"}))
-        return
+        sys.exit(0)
     
     # Get file path from tool input
     tool_input = ctx.get("tool_input", {})
@@ -60,23 +70,18 @@ def main():
     
     if not file_path:
         # No file path, no hooks to run
-        print(json.dumps({"action": "continue"}))
-        return
+        sys.exit(0)
     
     # Get all pre-tool hooks for this file
     hooks = get_hooks_for_phase(file_path, "pre-tool")
     
     # Run hooks in priority order
     for hook in hooks:
-        result = run_hook(hook, ctx)
-        
-        # If any hook blocks, stop and return block
-        if result.get("action") == "block":
-            print(json.dumps(result))
-            return
+        run_hook(hook, ctx)
+        # run_hook will exit directly if blocking, so if we get here it's continue
     
     # All hooks passed
-    print(json.dumps({"action": "continue"}))
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

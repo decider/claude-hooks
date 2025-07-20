@@ -12,6 +12,7 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
@@ -22,6 +23,7 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",
