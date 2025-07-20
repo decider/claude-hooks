@@ -89,17 +89,6 @@ export class HookSelector {
         sourceLabel = chalk.blue('[project]');
       } else if (choice.source === 'custom') {
         sourceLabel = chalk.dim('[custom]');
-      } else if (choice.source !== 'built-in') {
-        // Legacy custom hook detection for backwards compatibility
-        const isCustom = !choice.description.startsWith('TypeScript') && 
-                         !choice.description.startsWith('Code linting') &&
-                         !choice.description.startsWith('Run test') &&
-                         !choice.description.startsWith('Prevents') &&
-                         !choice.description.startsWith('Enforces') &&
-                         !choice.description.startsWith('System');
-        if (isCustom) {
-          sourceLabel = chalk.dim('[custom]');
-        }
       }
       
       // Highlight current line with bold and cyan color

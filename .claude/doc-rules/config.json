@@ -1,43 +1,24 @@
 {
   "fileTypes": {
-    "*.rs": ["docs/rust-standards.md"],
     "*.ts": ["docs/typescript-standards.md"],
-    "*.js": ["docs/javascript-standards.md"],
-    "*.tsx": ["docs/react-standards.md"],
-    "*.jsx": ["docs/react-standards.md"],
-    "*.py": ["docs/python-standards.md"],
-    "*.sol": ["docs/solana-standards.md", "docs/smart-contract-security.md"],
-    "*.move": ["docs/move-standards.md"]
+    "*.tsx": ["docs/typescript-standards.md"]
   },
   "directories": {
-    "src/contracts/": ["docs/contract-patterns.md", "docs/security-checklist.md"],
-    "src/programs/": ["docs/anchor-patterns.md", "docs/program-architecture.md"],
-    "src/utils/": ["docs/utility-standards.md"],
-    "src/components/": ["docs/component-guidelines.md"],
-    "tests/": ["docs/testing-standards.md"]
+    "tests/": ["docs/testing-standards.md"],
+    "testing/": ["docs/testing-standards.md"]
   },
   "thresholds": {
-    "default": 0.8,
-    "*.sol": 0.9,
-    "*.move": 0.9,
-    "src/contracts/*": 0.95
+    "default": 0.8
   },
   "evaluations": {
     "codeQuality": {
       "enabled": true,
-      "fileTypes": ["*.ts", "*.tsx", "*.js", "*.jsx", "*.rs", "*.py"],
+      "fileTypes": ["*.ts", "*.tsx"],
       "rules": {
         "maxFunctionLines": 20,
         "maxFileLines": 100,
         "maxNestingDepth": 3,
-        "maxParameters": 3,
-        "maxLineLength": 80
-      },
-      "thresholds": {
-        "default": 0.8,
-        "*.sol": 0.95,
-        "*.move": 0.95,
-        "src/contracts/*": 0.95
+        "maxParameters": 3
       }
     }
   }
